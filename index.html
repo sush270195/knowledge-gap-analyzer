@@ -1313,10 +1313,73 @@ const SF_UID_TO_PERSON_ID = Object.fromEntries(
   Object.entries(SF_USER_IDS).map(([pid, uid]) => [uid, pid])
 );
 
+async function fetchDataJson() {
+  const banner = document.getElementById("live-banner");
+  if (banner) { banner.textContent = "Loading live data…"; banner.style.display = "block"; }
+  try {
+    const resp = await fetch("data.json?t=" + Date.now());
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const d = await resp.json();
+    const engineers = d.engineers || {};
+    // Apply total case counts and per-topic counts to SCOPE_PEOPLE
+    Object.values(SCOPE_PEOPLE).forEach(people => {
+      people.forEach(p => {
+        const uid = SF_USER_IDS[p.id];
+        if (!uid || !engineers[uid]) return;
+        const live = engineers[uid];
+        p.totalCases = live.totalCases || 0;
+        // Update caseCount on each theme using taxonomy name mapping
+        if (p.themes && live.topics) {
+          p.themes.forEach(theme => {
+            const mapped = THEME_TO_TAXONOMY[theme.id];
+            if (!mapped) return;
+            const count = mapped.reduce((s, t) => s + (live.topics[t] || 0), 0);
+            theme.caseCount = count;
+          });
+        }
+      });
+    });
+    rebuildPersonList(document.getElementById("person-search").value || "");
+    render();
+    const ts = d.generatedAt ? new Date(d.generatedAt).toLocaleString() : "recently";
+    if (banner) { banner.textContent = "✓ Live data loaded — refreshed " + ts; setTimeout(() => { banner.style.display = "none"; }, 4000); }
+  } catch(e) {
+    console.warn("data.json fetch failed:", e);
+    if (banner) { banner.textContent = "⚠ Could not load live data — showing last snapshot"; setTimeout(() => { banner.style.display = "none"; }, 4000); }
+  }
+}
+
+// Maps theme id → Salesforce CaseReportingTaxonomy names
+const THEME_TO_TAXONOMY = {
+  "email-domain-verification": ["Core Email-Email Delivery", "Core Email-Email Logs"],
+  "eac-migration":             ["Sync Solutions-EAC (Email to Core Migration)", "Sync Solutions-EAC (Sync Issues)"],
+  "eac-setup":                 ["Sync Solutions-EAC (Initial Setup)"],
+  "isv-domain-whitelist":      ["Core Email-Email Delivery"],
+  "email-deliverability":      ["Core Email-Email Relay", "Core Email-Email Logs"],
+  "outlook-calendar-sync":     ["Sync Solutions-EAC (Activities Timeline)", "Sync Solutions-EAC (Sync Issues)"],
+  "chatter-notifications":     ["Collaboration Tools-Chatter"],
+  "mfa-security":              ["Multi Factor Authentication-Extension Request", "Multi Factor Authentication-General Education / How-to question", "Multi Factor Authentication-Setup Assistance"],
+  "email-change":              ["Admin Modification-Admin Change Request"],
+  "sandbox-data-cloud":        ["Data Streams/DLOs-Other Connectors", "Data Cloud Agent"],
+  "salesforce-inbox":          ["MailApp Integrations-Outlook Integration (without Inbox)"],
+  "flow-email-actions":        ["Configuration-Flow Builder"],
+  "omni-channel-routing":      ["Omni Channel-Setup and Configuration"],
+  "connected-app-oauth":       ["Authentication-OAuth"]
+};
+
 async function fetchLiveCaseCounts() {
-  // Only runs when hosted on Salesforce (not from file://)
-  if (!window.location.hostname.includes("salesforce.com") &&
-      !window.location.hostname.includes("force.com")) return;
+  const host = window.location.hostname;
+  const isGitHubPages = host.includes("github.io");
+  const isSalesforce = host.includes("salesforce.com") || host.includes("force.com");
+
+  // On GitHub Pages: load pre-built data.json
+  if (isGitHubPages) {
+    await fetchDataJson();
+    return;
+  }
+
+  // Only run live SF queries when hosted on Salesforce
+  if (!isSalesforce) return;
 
   const banner = document.getElementById("live-banner");
   if (banner) { banner.textContent = "Refreshing live case counts…"; banner.style.display = "block"; }
