@@ -1,0 +1,11 @@
+{
+  "name": "knowledge-gap-analyzer",
+  "version": "1.0.0",
+  "description": "Salesforce Knowledge Gap Analyzer Dashboard",
+  "scripts": {
+    "start": "serve . -p $PORT"
+  },
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}
