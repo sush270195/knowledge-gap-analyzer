@@ -1,1440 +1,1086 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Knowledge Gap Analysis – Krishna DV Org</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Knowledge Gap Dashboard – Krishna Org</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; background: #0d1117; color: #c9d1d9; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+:root{
+  --brand:#0176d3;--dark:#014486;--light:#d8edff;
+  --green:#2e844a;--orange:#dd7a01;--red:#c23934;--purple:#9050e9;
+  --bg:#f3f3f3;--card:#fff;--border:#dddbda;--text:#181818;--muted:#706e6b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Salesforce Sans',Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
-header { background: #161b22; padding: 12px 20px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-header .title-group h1 { font-size: 14px; font-weight: 600; color: #e6edf3; }
-header .title-group .subtitle { font-size: 11px; color: #6e7681; margin-top: 2px; }
-header .stats { display: flex; gap: 20px; }
-header .stat { text-align: right; }
-header .stat .val { font-size: 18px; font-weight: 700; color: #58a6ff; }
-header .stat .val.green { color: #3fb950; }
-header .stat .lbl { font-size: 10px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.06em; }
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--dark),var(--brand));color:#fff;padding:11px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.hdr h1{font-size:1.05rem;font-weight:700;}
+.hdr p{font-size:.73rem;opacity:.82;margin-top:1px;}
+.hdr-badge{margin-left:auto;background:#fff2;border:1px solid #fff4;border-radius:20px;padding:3px 11px;font-size:.7rem;font-weight:600;}
 
-.layout { display: flex; flex: 1; overflow: hidden; }
+/* FILTER BAR */
+.fbar{background:var(--card);border-bottom:1px solid var(--border);padding:7px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0;}
+.fbar label{font-size:.73rem;font-weight:600;color:var(--muted);}
+.fbar input,.fbar select{border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:.78rem;background:#fff;color:var(--text);}
+.fbar input:focus,.fbar select:focus{outline:2px solid var(--brand);}
+.fbar input{min-width:200px;}
+.fbtn{border:1px solid var(--brand);background:none;color:var(--brand);border-radius:4px;padding:5px 12px;cursor:pointer;font-size:.76rem;font-weight:600;}
+.fbtn:hover{background:var(--light);}
+.fbtn.primary{background:var(--brand);color:#fff;}
+.fbtn.primary:hover{background:var(--dark);}
+.ml{margin-left:auto;}
 
-.sidebar { width: 240px; min-width: 240px; background: #0d1117; border-right: 1px solid #21262d; padding: 14px; overflow-y: auto; flex-shrink: 0; }
-.sidebar section { margin-bottom: 16px; }
-.sidebar h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6e7681; margin-bottom: 8px; font-weight: 500; }
+/* LAYOUT */
+.body{display:flex;flex:1;overflow:hidden;}
 
-.scope-pills { display: flex; gap: 4px; }
-.scope-pill { flex: 1; padding: 6px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; border: 1px solid #21262d; background: transparent; color: #6e7681; text-align: center; transition: all 0.15s; }
-.scope-pill:hover { background: #161b22; color: #c9d1d9; border-color: #30363d; }
-.scope-pill.active { background: #0f2847; border-color: #1f6feb; color: #58a6ff; }
+/* LEFT HIERARCHY PANEL */
+.lp{width:270px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.lp-hdr{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.lp-hdr h3{font-size:.82rem;font-weight:700;flex:1;}
+.lp-hdr span{font-size:.62rem;color:var(--muted);}
+.lp-search{padding:6px 8px;border-bottom:1px solid var(--border);}
+.lp-search input{width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:.75rem;}
+.tree-scroll{overflow-y:auto;flex:1;padding:4px 2px;}
 
-.person-search { width: 100%; padding: 5px 8px; background: #161b22; border: 1px solid #21262d; border-radius: 5px; color: #c9d1d9; font-size: 11px; margin-bottom: 6px; outline: none; }
-.person-search::placeholder { color: #484f58; }
-.person-search:focus { border-color: #58a6ff; }
-.person-list { display: flex; flex-direction: column; gap: 2px; max-height: 200px; overflow-y: auto; }
-.person-list::-webkit-scrollbar { width: 4px; }
-.person-list::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+/* TREE NODES */
+.tn{margin:1px 0;}
+.tr{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;cursor:pointer;transition:background .1s;}
+.tr:hover{background:#f0f5ff;}
+.tr.selected{background:var(--light);border-left:3px solid var(--brand);padding-left:3px;}
+.ttog{width:13px;font-size:.58rem;color:var(--muted);text-align:center;flex-shrink:0;}
+.tav{width:21px;height:21px;border-radius:50%;background:var(--light);color:var(--dark);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;flex-shrink:0;}
+.tav.on{background:var(--brand);color:#fff;}
+.tname{font-size:.76rem;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tbadge{font-size:.58rem;border-radius:8px;padding:1px 5px;white-space:nowrap;flex-shrink:0;}
+.tc{margin-left:18px;border-left:2px solid #e5e9f2;padding-left:4px;display:none;}
+.tc.open{display:block;}
 
-.group-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #484f58; font-weight: 600; padding: 6px 6px 2px; }
+/* role badge colors */
+.rd{background:#d8edff;color:#014486;}
+.rsm{background:#f3ebff;color:#6a14d4;}
+.rm{background:#eaf5ea;color:#1a6d2a;}
+.rs{background:#fff0d9;color:#9a5300;}
+.re{background:#f0f0f0;color:#444;}
 
-.person-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 5px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; border: none; background: transparent; color: #8b949e; text-align: left; transition: all 0.12s; }
-.person-btn:hover { background: #161b22; color: #c9d1d9; }
-.person-btn.active { background: #0f2847; color: #58a6ff; }
-.person-btn .p-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.person-btn .p-badge { flex-shrink: 0; font-size: 9px; background: #21262d; color: #6e7681; padding: 1px 5px; border-radius: 8px; font-weight: 600; margin-left: 4px; }
-.person-btn.active .p-badge { background: #1f6feb22; color: #58a6ff; }
-.person-btn .p-dot { width: 6px; height: 6px; border-radius: 50%; background: #3fb950; flex-shrink: 0; margin-right: 6px; display: none; }
-.person-btn.has-data .p-dot { display: block; }
+/* RIGHT PANEL */
+.rp{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
 
-.filter-group { display: flex; flex-direction: column; gap: 4px; }
-.filter-group label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #8b949e; padding: 4px 6px; border-radius: 5px; cursor: pointer; user-select: none; transition: background 0.1s; }
-.filter-group label:hover { background: #161b22; color: #c9d1d9; }
-.filter-group input[type=checkbox] { accent-color: #58a6ff; width: 13px; height: 13px; flex-shrink: 0; }
+/* CONTEXT BANNER */
+.ctx{display:none;background:var(--light);border-bottom:1px solid var(--brand);padding:7px 16px;font-size:.78rem;align-items:center;gap:8px;flex-shrink:0;}
+.ctx strong{color:var(--dark);}
+.ctx-clear{margin-left:auto;cursor:pointer;color:var(--brand);font-weight:700;font-size:.75rem;}
 
-.main { flex: 1; overflow-y: auto; padding: 18px 20px; }
+/* KPI STRIP */
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;padding:12px 16px;flex-shrink:0;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:11px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.kpi .v{font-size:1.55rem;font-weight:700;color:var(--brand);}
+.kpi .l{font-size:.67rem;color:var(--muted);margin-top:2px;}
 
-.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.toolbar .result-count { font-size: 12px; color: #6e7681; }
-.export-btn { padding: 5px 12px; background: #0f2847; border: 1px solid #1f6feb; color: #58a6ff; border-radius: 6px; font-size: 11px; cursor: pointer; }
-.export-btn:hover { background: #142d50; }
+/* CONTENT */
+.content{padding:0 16px 24px;flex:1;}
 
-.no-data-state { padding: 48px 40px; text-align: center; }
-.no-data-state .nd-icon { font-size: 32px; margin-bottom: 12px; }
-.no-data-state .nd-title { font-size: 14px; font-weight: 600; color: #e6edf3; margin-bottom: 6px; }
-.no-data-state .nd-sub { font-size: 12px; color: #6e7681; line-height: 1.6; }
+/* TABS */
+.tabs{display:flex;border-bottom:2px solid var(--border);}
+.tab{padding:8px 15px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+.tab.active{color:var(--brand);border-bottom-color:var(--brand);}
+.tpanel{display:none;}
+.tpanel.active{display:block;}
 
-.gap-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.gap-table th { text-align: left; padding: 7px 10px; background: #161b22; border-bottom: 1px solid #21262d; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #6e7681; font-weight: 500; position: sticky; top: 0; z-index: 1; }
-.gap-table td { padding: 10px 10px; border-bottom: 1px solid #1c2128; vertical-align: top; line-height: 1.45; }
-.gap-table tbody tr:hover td { background: #161b22; }
+/* CHARTS */
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.ch{padding:10px 13px;border-bottom:1px solid var(--border);}
+.ch h4{font-size:.82rem;font-weight:700;}
+.ch span{font-size:.68rem;color:var(--muted);}
+.cw{padding:10px 13px;}
+canvas{max-height:210px;}
 
-.tag { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
-.tag-ka    { background: #0f2847; color: #58a6ff; border: 1px solid #1f6feb22; }
-.tag-voc   { background: #2a1e4a; color: #b088f7; border: 1px solid #7c3aed22; }
-.tag-covered { background: #0f2a1d; color: #3fb950; border: 1px solid #238636; }
-.tag-partial { background: #2a1e00; color: #d29922; border: 1px solid #9e6a0350; }
-.tag-gap   { background: #2d1117; color: #f85149; border: 1px solid #da363622; }
+/* TABLES */
+.tw{overflow-x:auto;margin-top:12px;}
+table{width:100%;border-collapse:collapse;font-size:.78rem;}
+th{background:#f8f9fa;text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-weight:700;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;}
+td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f5f8fc;}
 
-.tags-cell { display: flex; flex-direction: column; gap: 4px; }
-.title-block { margin-bottom: 8px; }
-.title-block:last-child { margin-bottom: 0; }
-.title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
-.title-label { font-size: 10px; color: #6e7681; margin-bottom: 2px; }
-.title-text { flex: 1; color: #8b949e; font-size: 11px; }
-.copy-btn { flex-shrink: 0; background: none; border: 1px solid #21262d; color: #6e7681; padding: 2px 7px; border-radius: 4px; font-size: 10px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.copy-btn:hover { border-color: #58a6ff; color: #58a6ff; }
-.copy-btn.copied { border-color: #3fb950; color: #3fb950; }
+/* TABLE BADGES / PILLS */
+.badge{display:inline-block;border-radius:10px;padding:2px 7px;font-size:.66rem;font-weight:700;}
+.b-miss{background:#fff0d9;color:#9a5300;border:1px solid #ffd580;}
+.b-voc{background:#f3ebff;color:#6a14d4;border:1px solid #c7a8f9;}
+.b-ok{background:#eaf5ea;color:#1a6d2a;border:1px solid #a8d5a9;}
+.b-upd{background:#fff5e0;color:#9a5300;border:1px solid #ffd080;}
+.pill{display:inline-block;background:var(--light);color:var(--dark);border-radius:10px;padding:1px 7px;font-size:.66rem;font-weight:600;margin:1px;}
+.gap-tag{font-size:.68rem;color:var(--red);background:#fde8e8;border-radius:3px;padding:1px 5px;display:block;margin-top:2px;}
+.art-link{color:var(--brand);text-decoration:none;font-size:.73rem;}
+.art-link:hover{text-decoration:underline;}
+.art-sub{font-size:.68rem;color:var(--muted);display:block;margin-top:1px;}
+.pbar{background:#e8e8e8;border-radius:3px;height:7px;width:75px;display:inline-block;vertical-align:middle;}
+.pbar-fill{background:var(--brand);border-radius:3px;height:7px;}
+.empty-row{text-align:center;padding:28px;color:var(--muted);font-size:.82rem;}
 
-.created-cell { display: flex; flex-direction: column; gap: 5px; }
-.created-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
-.created-count { font-weight: 700; font-size: 13px; }
-.created-count.has-count { color: #3fb950; }
-.created-count.zero { color: #484f58; }
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 13px;border-top:1px solid var(--border);background:#fafafa;}
+.li{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--muted);}
 
-.theme-name { font-weight: 500; color: #c9d1d9; }
-.case-count-badge { display: inline-block; background: #21262d; color: #8b949e; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-
-.priority-section { margin-top: 28px; }
-.section-title { font-size: 13px; font-weight: 600; color: #e6edf3; margin-bottom: 12px; }
-.priority-cards { display: flex; gap: 12px; flex-wrap: wrap; }
-.priority-card { flex: 1; min-width: 280px; max-width: 380px; background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 14px 16px; }
-
-#live-banner { display: none; position: fixed; bottom: 16px; right: 20px; background: #161b22; border: 1px solid #21262d; color: #8b949e; font-size: 11px; padding: 6px 12px; border-radius: 6px; z-index: 100; }
-.priority-card.rank-1 { border-left: 3px solid #f85149; }
-.priority-card.rank-2 { border-left: 3px solid #d29922; }
-.priority-card.rank-3 { border-left: 3px solid #58a6ff; }
-.priority-card .rank-label { font-size: 10px; color: #6e7681; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
-.priority-card .p-topic { font-size: 13px; font-weight: 600; color: #e6edf3; margin-bottom: 6px; }
-.priority-card .p-reason { font-size: 11px; color: #8b949e; line-height: 1.5; margin-bottom: 10px; }
-.priority-card .rec-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-
-.sources-row { margin-top: 20px; padding: 10px 14px; background: #161b22; border: 1px solid #21262d; border-radius: 8px; display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
-.source-item { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 5px; }
-.source-item .s-name { color: #c9d1d9; font-weight: 500; }
-.source-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #6e7681; font-weight: 500; }
-
-.empty-state { padding: 40px; text-align: center; color: #6e7681; font-size: 13px; display: none; }
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #484f58; }
+@media(max-width:860px){.crow{grid-template-columns:1fr;}.lp{width:220px;}}
+@media(max-width:620px){.body{flex-direction:column;}.lp{width:100%;height:180px;border-right:none;border-bottom:1px solid var(--border);}}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="title-group">
-    <h1 id="header-title">Knowledge Gap Analysis</h1>
-    <div class="subtitle" id="header-subtitle">Krishna DV Org · Senior Director, Technical Support Engineering · 2026-06-22</div>
+<!-- HEADER -->
+<div class="hdr">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <rect width="28" height="28" rx="6" fill="white" fill-opacity=".15"/>
+    <path d="M14 4C8.477 4 4 8.477 4 14s4.477 10 10 10 10-4.477 10-10S19.523 4 14 4zm1 13.414V19h-2v-1.586l-3.707-3.707 1.414-1.414L12 15.586V8h2v7.586l2.293-2.293 1.414 1.414L15 17.414z" fill="white"/>
+  </svg>
+  <div>
+    <h1>Knowledge Gap &amp; VOC Dashboard</h1>
+    <p>Krishna Davuluri Org &nbsp;·&nbsp; Last 30 Days &nbsp;·&nbsp; Click any person in the hierarchy to filter</p>
   </div>
-  <div class="stats">
-    <div class="stat"><div class="val" id="stat-cases">—</div><div class="lbl">Cases (30d)</div></div>
-    <div class="stat"><div class="val" id="stat-themes">—</div><div class="lbl">Themes</div></div>
-    <div class="stat"><div class="val" id="stat-gaps">—</div><div class="lbl">Gaps</div></div>
-    <div class="stat"><div class="val green" id="stat-created-ka">—</div><div class="lbl" id="lbl-ka">KAs Created</div></div>
-    <div class="stat"><div class="val green" id="stat-created-voc">—</div><div class="lbl" id="lbl-voc">VOCs Created</div></div>
-  </div>
-</header>
-
-<div id="live-banner"></div>
-<div class="layout">
-  <aside class="sidebar">
-    <section>
-      <h3>Scope</h3>
-      <div class="scope-pills">
-        <button class="scope-pill active" onclick="setScope('engineer')">Engineer</button>
-        <button class="scope-pill" onclick="setScope('swarm')">Swarm Lead</button>
-        <button class="scope-pill" onclick="setScope('manager')">Manager</button>
-      </div>
-    </section>
-
-    <section>
-      <h3 id="person-list-label">Engineer</h3>
-      <input class="person-search" id="person-search" type="text" placeholder="Search name…" oninput="filterPersonList(this.value)">
-      <div class="person-list" id="person-list"></div>
-    </section>
-
-    <section>
-      <h3>Coverage</h3>
-      <div class="filter-group" id="coverage-filters"></div>
-    </section>
-    <section>
-      <h3>Content Type</h3>
-      <div class="filter-group" id="type-filters"></div>
-    </section>
-    <section>
-      <h3>Topic</h3>
-      <div class="filter-group" id="topic-filters"></div>
-    </section>
-    <section>
-      <h3>Min Cases</h3>
-      <div style="padding:0 6px;">
-        <input type="range" id="f-min-cases" min="1" max="250" value="1" oninput="onMinCases(this.value)" style="width:100%;accent-color:#58a6ff">
-        <div style="font-size:11px;color:#6e7681;margin-top:4px">≥ <span id="min-cases-val">1</span> cases</div>
-      </div>
-    </section>
-  </aside>
-
-  <main class="main" id="main-area">
-    <div class="toolbar">
-      <div class="result-count" id="result-count">Select a person to view their knowledge gap data</div>
-      <button class="export-btn" onclick="exportCSV()">↓ Export CSV</button>
-    </div>
-    <div id="no-data-state" class="no-data-state" style="display:none;">
-      <div class="nd-icon">📊</div>
-      <div class="nd-title" id="nd-title">No data collected yet</div>
-      <div class="nd-sub">Case analysis has not been run for this person yet.<br>Run a 30-day case query in OrgCS to populate this view.</div>
-    </div>
-    <table class="gap-table" id="main-table" style="display:none;">
-      <thead>
-        <tr>
-          <th style="width:20%">Topic / Theme</th>
-          <th style="width:7%">Cases</th>
-          <th style="width:11%">Coverage</th>
-          <th style="width:11%">Recommended</th>
-          <th style="width:10%" id="col-created-header">Created</th>
-          <th style="width:41%">Suggested Title</th>
-        </tr>
-      </thead>
-      <tbody id="table-body"></tbody>
-    </table>
-    <div class="empty-state" id="empty-state">No themes match your current filters.</div>
-    <div class="priority-section" id="priority-section" style="display:none;">
-      <div class="section-title">🏆 Top 3 Priority Gaps</div>
-      <div class="priority-cards" id="priority-cards"></div>
-    </div>
-    <div class="sources-row" id="sources-row"></div>
-  </main>
+  <div class="hdr-badge">LIVE · Krishna Org</div>
 </div>
 
+<!-- FILTER BAR -->
+<div class="fbar">
+  <label>Search</label>
+  <input type="text" id="fSearch" placeholder="Topic, engineer, article..."/>
+  <label>KA Status</label>
+  <select id="fKA">
+    <option value="">All</option>
+    <option value="missing">Draft KA Needed</option>
+    <option value="partial">Needs Update</option>
+    <option value="exists">Article Exists</option>
+    <option value="voc">VOC Opportunity</option>
+  </select>
+  <label>Topic</label>
+  <select id="fTopic"><option value="">All Topics</option></select>
+  <label>Pod</label>
+  <select id="fPod"><option value="">All Pods</option></select>
+  <label>Swarm Lead</label>
+  <select id="fSwarm"><option value="">All Swarm Leads</option></select>
+  <label>Manager</label>
+  <select id="fManager"><option value="">All Managers</option></select>
+  <label>Engineer</label>
+  <select id="fEngineer"><option value="">All Engineers</option></select>
+  <button class="fbtn ml" id="btnReset">Reset All</button>
+  <button class="fbtn primary" id="btnExpand">Expand Tree</button>
+  <button class="fbtn" id="btnCollapse">Collapse Tree</button>
+</div>
+
+<div class="body">
+
+  <!-- LEFT: HIERARCHY TREE -->
+  <div class="lp">
+    <div class="lp-hdr">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="3.5" r="2.2" stroke="#0176d3" stroke-width="1.3"/><path d="M1.5 11.5c0-2.485 2.239-4.5 5-4.5s5 2.015 5 4.5" stroke="#0176d3" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <h3>Krishna Org Hierarchy</h3>
+      <span>click to filter</span>
+    </div>
+    <div class="lp-search"><input type="text" id="tSearch" placeholder="Search people..."/></div>
+    <div class="tree-scroll" id="treeRoot"></div>
+  </div>
+
+  <!-- RIGHT: DASHBOARD -->
+  <div class="rp">
+
+    <!-- CONTEXT BANNER -->
+    <div class="ctx" id="ctxBanner">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="3.5" r="2.2" stroke="#0176d3" stroke-width="1.3"/><path d="M1.5 11.5c0-2.485 2.239-4.5 5-4.5s5 2.015 5 4.5" stroke="#0176d3" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <span>Filtered by: <strong id="ctxName"></strong> &nbsp;<em id="ctxSub" style="color:var(--muted);font-size:.72rem;"></em></span>
+      <span class="ctx-clear" id="ctxClear">✕ Clear</span>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="krow">
+      <div class="kpi"><div class="v" id="kCases">—</div><div class="l">Cases (30d)</div></div>
+      <div class="kpi"><div class="v" id="kTopics">—</div><div class="l">Topics</div></div>
+      <div class="kpi"><div class="v" id="kMiss">—</div><div class="l">New KA Needed</div></div>
+      <div class="kpi"><div class="v" id="kPart">—</div><div class="l">Needs Update</div></div>
+      <div class="kpi"><div class="v" id="kVOC">—</div><div class="l">VOC Signals</div></div>
+      <div class="kpi"><div class="v" id="kKA">—</div><div class="l">KA Created</div></div>
+      <div class="kpi"><div class="v" id="kEngs">—</div><div class="l">Engineers</div></div>
+    </div>
+
+    <div class="content">
+      <div class="tabs">
+        <div class="tab active" data-tab="gap">KA Gap &amp; VOC</div>
+        <div class="tab" data-tab="eng">Engineer Tracker</div>
+        <div class="tab" data-tab="mgr">Manager View</div>
+        <div class="tab" data-tab="hier">Hierarchy Table</div>
+      </div>
+
+      <!-- TAB: GAP -->
+      <div class="tpanel active" id="tab-gap">
+        <div class="crow">
+          <div class="card">
+            <div class="ch"><h4>Top Topics by Case Volume</h4><span>Color = KA status</span></div>
+            <div class="cw"><canvas id="cTopics"></canvas></div>
+            <div class="legend">
+              <div class="li"><span style="width:10px;height:10px;background:#fe9339;border-radius:2px;display:inline-block;"></span>Draft KA Needed</div>
+              <div class="li"><span style="width:10px;height:10px;background:#9050e9;border-radius:2px;display:inline-block;"></span>VOC Opportunity</div>
+              <div class="li"><span style="width:10px;height:10px;background:#0176d3;border-radius:2px;display:inline-block;"></span>Needs Update</div>
+              <div class="li"><span style="width:10px;height:10px;background:#2e844a;border-radius:2px;display:inline-block;"></span>Article Exists</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><h4>KA Created by Engineer (30d)</h4></div>
+            <div class="cw"><canvas id="cKA"></canvas></div>
+          </div>
+        </div>
+        <div class="card tw">
+          <table id="tGap">
+            <thead><tr>
+              <th>Topic</th><th>Cases</th><th>Recommendation</th>
+              <th>Existing Article</th><th>Gap / What's Missing</th><th>Engineers</th>
+            </tr></thead>
+            <tbody id="bGap"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: ENGINEER -->
+      <div class="tpanel" id="tab-eng">
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Engineer</th><th>Manager</th><th>Pod</th>
+              <th>Cases</th><th>KA Created</th><th>KA Article Topics</th><th>Case Load</th>
+            </tr></thead>
+            <tbody id="bEng"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: MANAGER -->
+      <div class="tpanel" id="tab-mgr">
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Manager</th><th>Role Level</th><th>Engineers</th>
+              <th>Total Cases</th><th>KA Created</th><th>Top Gap Topics</th><th>VOC Signals</th>
+            </tr></thead>
+            <tbody id="bMgr"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: HIERARCHY -->
+      <div class="tpanel" id="tab-hier">
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Name</th><th>Title / Role</th><th>Reports To</th>
+              <th>Pod</th><th>Cases (30d)</th><th>KA Created</th><th>Slack</th>
+            </tr></thead>
+            <tbody id="bHier"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /rp -->
+</div><!-- /body -->
+
 <script>
-// ── Shared themes template ─────────────────────────────────────────────────────
-const THEMES_HARIKA = [
-  { id:"email-domain-verification", name:"Email Domain Verification & DKIM", caseCount:43, coverage:"partial", recommended:["ka","voc"], created:{ka:0,voc:0}, kaTitle:"How to resolve email domain verification failure and DKIM key activation issues after Salesforce Summer '26 authorized domain enforcement", vocTitle:"Summer '26 email domain enforcement generating mass repeated warnings and delivery disruptions for admins who already have DKIM configured", priorityRank:1, priorityReason:"Highest volume (43 cases, 31% of total load). Summer '26 enforcement is live — customers receive repeated warning emails even after DKIM is active. No KA covers edge cases: DKIM active but ownership still showing 'No', third-party domains, or ISV-managed orgs." },
-  { id:"eac-migration", name:"EAC Migration — EWS / Lightning Sync to MS Graph", caseCount:18, coverage:"partial", recommended:["ka"], created:{ka:1,voc:0}, kaTitle:"How to complete Einstein Activity Capture migration from Exchange Web Services (EWS) or Lightning Sync to Microsoft Graph API — step-by-step and common failure scenarios", vocTitle:"", priorityRank:2, priorityReason:"18 cases driven by Microsoft's EWS retirement deadline. Existing guide covers happy path but misses 'Failed to save the config', accidental Graph upgrade blocking production, and MS Graph not showing in sandbox." },
-  { id:"eac-setup", name:"EAC Setup, Configuration & Licensing", caseCount:18, coverage:"partial", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to troubleshoot Einstein Activity Capture setup failures — license mismatch, Field Mapping tab missing, greyed-out configuration, and 'Failed to save the config' error in Production", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"isv-domain-whitelist", name:"ISV Partner Domain Whitelisting", caseCount:8, coverage:"gap", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to request ISV Partner Domain whitelisting for system notification deliverability — batch submission process and required org ID format", vocTitle:"", priorityRank:3, priorityReason:"8 identical cases opened in one window — no KA exists for this process. Customers don't know how to self-serve or batch-submit. Repetitive handling cost is high." },
-  { id:"email-deliverability", name:"Email Deliverability & Relay", caseCount:9, coverage:"partial", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to configure Salesforce email relay via Microsoft Exchange Online (SMTP replacement) and resolve DMARC alignment failures when sending to Outlook recipients", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"outlook-calendar-sync", name:"Outlook Calendar & Attendee Sync", caseCount:8, coverage:"partial", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to troubleshoot Outlook calendar events showing as 'Busy' in Salesforce and inconsistent attendee sync between Microsoft 365 and Salesforce via EAC", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"chatter-notifications", name:"Chatter & Email Notifications", caseCount:7, coverage:"covered", recommended:[], created:{ka:1,voc:0}, kaTitle:"", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"mfa-security", name:"MFA / Phishing-Resistant Authentication", caseCount:6, coverage:"partial", recommended:["ka"], created:{ka:1,voc:0}, kaTitle:"How to request a phishing-resistant MFA enforcement extension for privileged users — justification template and required information (Summer '26 deadline)", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"email-change", name:"Email Change & User Domain Management", caseCount:5, coverage:"partial", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to change a user's email address as a Salesforce admin without requiring the user's own login — verification link behavior and workarounds", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"sandbox-data-cloud", name:"Sandbox & Data Cloud Connectivity", caseCount:4, coverage:"gap", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to clear a stale Data Cloud companion org binding after sandbox refresh — resolving 'already has a connection with a Data Cloud home org' error", vocTitle:"", priorityRank:0, priorityReason:"" }
+// ============================================================
+// DATA
+// ============================================================
+
+var PEOPLE = [
+  // L0
+  {id:"KDV", name:"Krishna Davuluri",         title:"Senior Director, Technical Support Engineering", email:"kdv@salesforce.com",                   slack:"kdv",                 mid:null,  pod:"Leadership"},
+  // L1 – direct to Krishna
+  {id:"MC",  name:"Mukul Chandok",             title:"Director, Technical Support Engineering",        email:"mchandok@salesforce.com",              slack:"mchandok",            mid:"KDV", pod:"India – Sales Cloud"},
+  {id:"AV",  name:"Amit Verma",                title:"Director, Technical Support Engineering",        email:"amitverma@salesforce.com",             slack:"amitverma",           mid:"KDV", pod:"India – Service Cloud"},
+  {id:"FS",  name:"Francesca Settembrino",     title:"Director, Technical Support Engineering",        email:"fsettembrino@salesforce.com",          slack:"fsettembrino",        mid:"KDV", pod:"EMEA"},
+  {id:"TO",  name:"Talita de Oliveira",        title:"Manager, Technical Support Engineering",         email:"tsimoesdeoliveira@salesforce.com",     slack:"talita",              mid:"KDV", pod:"EMEA"},
+  {id:"SB",  name:"Simardeep Bindra",          title:"Senior Principal Swarm Lead",                    email:"s.bindra@salesforce.com",              slack:"s.bindra",            mid:"KDV", pod:"Swarm"},
+  {id:"JSQ", name:"Joao Sequeira",             title:"Principal Swarm Lead",                           email:"jcorreiasequeira@salesforce.com",      slack:"jcorreiasequeira",    mid:"KDV", pod:"Swarm"},
+  {id:"PCO", name:"Patrick Coakley",           title:"Principal Swarm Lead",                           email:"pcoakley@salesforce.com",              slack:"pcoakley",            mid:"KDV", pod:"Swarm"},
+  {id:"RQT", name:"Renato Quattrocchi",        title:"Principal Swarm Lead",                           email:"pquattrocchi@salesforce.com",          slack:"pquattrocchi",        mid:"KDV", pod:"Swarm"},
+  // L2 – under Mukul Chandok
+  {id:"AA",  name:"Ajith Anand",               title:"Sr Manager, Technical Support Engineering",      email:"aanand@salesforce.com",                slack:"aanand",              mid:"MC",  pod:"India – Sales Cloud"},
+  {id:"SD",  name:"Swati Devsoth",             title:"Sr Manager, Technical Support Engineering",      email:"sdevsoth@salesforce.com",              slack:"sdevsoth",            mid:"MC",  pod:"India – Sales Cloud"},
+  {id:"CB",  name:"Chaitanya Kumar Bansetti",  title:"Principal Swarm Lead",                           email:"cbansetti@salesforce.com",             slack:"cbansetti",           mid:"MC",  pod:"Swarm"},
+  {id:"CSH", name:"Chinmayee Sahoo",           title:"Principal Swarm Lead",                           email:"csahoo@salesforce.com",                slack:"csahoo",              mid:"MC",  pod:"Swarm"},
+  {id:"DML", name:"Deepak Kumar Mallela",      title:"Principal Swarm Lead",                           email:"dmallela@salesforce.com",              slack:"dmallela",            mid:"MC",  pod:"Swarm"},
+  {id:"TJN", name:"Tushar Jain",               title:"Principal Swarm Lead",                           email:"tushar.jain@salesforce.com",           slack:"tushar.jain",         mid:"MC",  pod:"Swarm"},
+  // L2 – under Amit Verma
+  {id:"MAB", name:"Mathews Abraham",           title:"Sr Manager, Technical Support Engineering",      email:"mathews.abraham@salesforce.com",       slack:"mathews.abraham",     mid:"AV",  pod:"India – Service Cloud"},
+  {id:"AWD", name:"Anurikt Wadhwa",            title:"Sr Manager, Technical Support Engineering",      email:"awadhwa@salesforce.com",               slack:"awadhwa",             mid:"AV",  pod:"India – Service Cloud"},
+  {id:"MMT", name:"Mudit Mathur",              title:"Sr Manager, Technical Support Engineering",      email:"mudit.mathur@salesforce.com",          slack:"mudit.mathur",        mid:"AV",  pod:"India – Service Cloud"},
+  {id:"SKS", name:"Shakti Singh",              title:"Principal Swarm Lead",                           email:"shakti.singh@salesforce.com",          slack:"shakti.singh",        mid:"AV",  pod:"Swarm"},
+  {id:"STP", name:"Satyanarayana Polepalli",   title:"Principal Swarm Lead",                           email:"s.polepalli@salesforce.com",           slack:"s.polepalli",         mid:"AV",  pod:"Swarm"},
+  // L3 – under Ajith Anand
+  {id:"CBS", name:"Chandra Bhanu Shukla",      title:"Manager, Technical Support Engineering",         email:"cshukla@salesforce.com",               slack:"cshukla",             mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"SBH", name:"Shyam Bihari",              title:"Manager, Technical Support Engineering",         email:"sbihari@salesforce.com",               slack:"sbihari",             mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"SAL", name:"Saikumar Alapati",          title:"Manager, Technical Support Engineering",         email:"saikumara@salesforce.com",             slack:"saikumara",           mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"SRK", name:"Saicharan Reddy Kasireddy", title:"Manager, Technical Support Engineering",         email:"sreddyk@salesforce.com",               slack:"sreddyk",             mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"HJS", name:"Hari Jitray Surya S",       title:"Principal Swarm Lead",                           email:"hari.s@salesforce.com",                slack:"hari.s",              mid:"AA",  pod:"Swarm"},
+  {id:"IAP", name:"Issac Ananda Pal C",        title:"Principal Swarm Lead",                           email:"issacanandapal.c@salesforce.com",      slack:"issacanandapal.c",    mid:"AA",  pod:"Swarm"},
+  {id:"STG", name:"Sravankumar Tangudu",       title:"Principal Swarm Lead",                           email:"stangudu@salesforce.com",              slack:"stangudu",            mid:"AA",  pod:"Swarm"},
+  {id:"PCV", name:"Priya Chowdary Vemsani",    title:"Principal Swarm Lead",                           email:"pvemsani@salesforce.com",              slack:"pvemsani",            mid:"AA",  pod:"Swarm"},
+  {id:"SAN", name:"Shaan Anshu",               title:"Principal Swarm Lead",                           email:"sanshu@salesforce.com",                slack:"sanshu",              mid:"AA",  pod:"Swarm"},
+  // L3 – under Swati Devsoth
+  {id:"HAL", name:"Harish Alla",               title:"Manager, Technical Support Engineering",         email:"halla@salesforce.com",                 slack:"halla",               mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"SHT", name:"Shikha Tripathi",           title:"Manager, Technical Support Engineering",         email:"shikha.tripathi@salesforce.com",       slack:"shikha.tripathi",     mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"VPW", name:"Vidyabai Pawar",            title:"Manager, Technical Support Engineering",         email:"vidyabai.pawar@salesforce.com",        slack:"vidyabai.pawar",      mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"VPB", name:"Vivek Pai Baidebettu",      title:"Manager, Technical Support Engineering",         email:"vpaibaidebettu@salesforce.com",        slack:"vpaibaidebettu",      mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"SCI", name:"Suchetana CI",              title:"Manager, Technical Support Engineering",         email:"suchetana.ci@salesforce.com",          slack:"suchetana.ci",        mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"MEL", name:"Madhu Elipe",               title:"Principal Swarm Lead",                           email:"melipe@salesforce.com",                slack:"melipe",              mid:"SD",  pod:"Swarm"},
+  {id:"RPW", name:"Rahul Pawar",               title:"Swarm Lead",                                     email:"rahul.pawar@salesforce.com",           slack:"rahul.pawar",         mid:"SD",  pod:"Swarm"},
+  {id:"SSK", name:"Sanjeev Kumar Singh",        title:"Swarm Lead",                                     email:"sanjeev.singh@salesforce.com",         slack:"sanjeev.singh",       mid:"SD",  pod:"Swarm"},
+  // L3 – under Mathews Abraham
+  {id:"MGR", name:"Mayank Gairola",            title:"Manager, Technical Support Engineering",         email:"mgairola@salesforce.com",              slack:"mgairola",            mid:"MAB", pod:"India – Service Cloud"},
+  {id:"PMK", name:"Priyanka Mukherjee",        title:"Manager, Technical Support Engineering",         email:"priyanka.mukherjee@salesforce.com",    slack:"priyanka.mukherjee",  mid:"MAB", pod:"India – Service Cloud"},
+  {id:"RKR", name:"Remya Krishnan",            title:"Manager, Technical Support Engineering",         email:"remya.krishnan@salesforce.com",        slack:"remya.krishnan",      mid:"MAB", pod:"India – Service Cloud"},
+  {id:"KAR", name:"Khan Anas Rehmani",         title:"Principal Swarm Lead",                           email:"krehmani@salesforce.com",              slack:"krehmani",            mid:"MAB", pod:"Swarm"},
+  {id:"RSV", name:"Ravi Sourav",               title:"Swarm Lead",                                     email:"rsourav@salesforce.com",               slack:"rsourav",             mid:"MAB", pod:"Swarm"},
+  {id:"SSR", name:"Sushmita Srivastava",        title:"Swarm Lead",                                     email:"sushmita.srivastava@salesforce.com",   slack:"sushmita.srivastava", mid:"MAB", pod:"Swarm"},
+  // L3 – under Anurikt Wadhwa
+  {id:"MRH", name:"Mayur Rohra",               title:"Manager, Technical Support Engineering",         email:"mayur.rohra@salesforce.com",           slack:"mayur.rohra",         mid:"AWD", pod:"India – Service Cloud"},
+  {id:"ADG", name:"Amit Daga",                 title:"Manager, Technical Support Engineering",         email:"amit.daga@salesforce.com",             slack:"amit.daga",           mid:"AWD", pod:"India – Service Cloud"},
+  {id:"DSN", name:"Deep Sanghani",             title:"Manager, Technical Support Engineering",         email:"dsanghani@salesforce.com",             slack:"dsanghani",           mid:"AWD", pod:"India – Service Cloud"},
+  {id:"AMS", name:"Abhishek Massand",          title:"Manager, Technical Support Engineering",         email:"amassand@salesforce.com",              slack:"amassand",            mid:"AWD", pod:"India – Service Cloud"},
+  {id:"PDV", name:"Pushpa Devaraj",            title:"Manager, Technical Support Engineering",         email:"pdevaraj@salesforce.com",              slack:"pdevaraj",            mid:"AWD", pod:"India – Service Cloud"},
+  {id:"AGP", name:"Anudeep Gopagoni",          title:"Principal Swarm Lead",                           email:"agopagoni@salesforce.com",             slack:"agopagoni",           mid:"AWD", pod:"Swarm"},
+  {id:"JSL", name:"Jasmeet Singh Saluja",      title:"Swarm Lead",                                     email:"jsaluja@salesforce.com",               slack:"jsaluja",             mid:"AWD", pod:"Swarm"},
+  {id:"AGK", name:"Amit Gaikwad",              title:"Swarm Lead",                                     email:"amit.gaikwad@salesforce.com",          slack:"amit.gaikwad",        mid:"AWD", pod:"Swarm"},
+  // L3 – under Mudit Mathur
+  {id:"AMR", name:"Ankur Mishra",              title:"Manager, Technical Support Engineering",         email:"ankurmishra@salesforce.com",           slack:"ankurmishra",         mid:"MMT", pod:"India – Service Cloud"},
+  {id:"ANM", name:"Anil Maharana",             title:"Manager, Technical Support Engineering",         email:"a.maharana@salesforce.com",            slack:"a.maharana",          mid:"MMT", pod:"India – Service Cloud"},
+  {id:"DWN", name:"Durfshan Wani",             title:"Manager, Technical Support Engineering",         email:"dwani@salesforce.com",                 slack:"dwani",               mid:"MMT", pod:"India – Service Cloud"},
+  {id:"DGR", name:"Devendra Gurung",           title:"Principal Swarm Lead",                           email:"devendra.gurung@salesforce.com",       slack:"devendra.gurung",     mid:"MMT", pod:"Swarm"},
+  {id:"ASH", name:"Amisha Sharma",             title:"Swarm Lead",                                     email:"amisha.sharma@salesforce.com",         slack:"amisha.sharma",       mid:"MMT", pod:"Swarm"},
+  {id:"SLT", name:"Saloni Tiwari",             title:"Swarm Lead",                                     email:"saloni.tiwari@salesforce.com",         slack:"saloni.tiwari",       mid:"MMT", pod:"Swarm"},
+  {id:"VKN", name:"Vinod Kumar Nadimpalli",    title:"Swarm Lead",                                     email:"kumar.vinod@salesforce.com",           slack:"kumar.vinod",         mid:"MMT", pod:"Swarm"},
+  // Engineers (TSEs who appear in case data)
+  {id:"ATG", name:"Amith TG",                  title:"Technical Support Engineer",                     email:"amith.tg@salesforce.com",              slack:"amith.tg",            mid:"MAB", pod:"India – Service Cloud"},
+  {id:"SJH", name:"Subhika Jha",               title:"Technical Support Engineer",                     email:"subhika.jha@salesforce.com",           slack:"subhika.jha",         mid:"MAB", pod:"India – Service Cloud"},
+  {id:"AKS", name:"Aditya Kumar Singh",        title:"Technical Support Engineer",                     email:"aditya.singh@salesforce.com",          slack:"aditya.singh",        mid:"MAB", pod:"India – Service Cloud"},
+  {id:"RGL", name:"Rohit Gilda",               title:"Technical Support Engineer",                     email:"rohit.gilda@salesforce.com",           slack:"rohit.gilda",         mid:"SCI", pod:"India – Sales Cloud"},
+  {id:"MZA", name:"Md Zeeshan Ahmad",          title:"Technical Support Engineer",                     email:"md.zeeshan@salesforce.com",            slack:"md.zeeshan",          mid:"AMR", pod:"India – Service Cloud"},
+  {id:"JWG", name:"Jonathan Weng",             title:"Technical Support Engineer",                     email:"jonathan.weng@salesforce.com",         slack:"jonathan.weng",       mid:"FS",  pod:"EMEA"}
 ];
 
-const THEMES_SUSHMITA_POD = [
-  { id:"email-domain-verification", name:"Email Domain Verification & DKIM", caseCount:98, coverage:"partial", recommended:["ka","voc"], created:{ka:1,voc:1}, kaTitle:"How to resolve email domain verification failure and DKIM key activation issues after Salesforce Summer '26 authorized domain enforcement", vocTitle:"Summer '26 email domain enforcement generating mass repeated warnings and delivery disruptions for admins who already have DKIM configured", priorityRank:1, priorityReason:"Highest volume across the pod (98 cases, 24% of pod load). All engineers handling this repeatedly. One KA exists but misses ISV-managed org edge cases and DKIM active / ownership 'No' state." },
-  { id:"eac-migration", name:"EAC Migration — EWS / Lightning Sync to MS Graph", caseCount:62, coverage:"partial", recommended:["ka"], created:{ka:2,voc:0}, kaTitle:"How to complete Einstein Activity Capture migration from EWS or Lightning Sync to Microsoft Graph API — step-by-step and common failure scenarios", vocTitle:"", priorityRank:2, priorityReason:"62 pod-level cases driven by Microsoft's EWS deadline. Two KAs exist but coverage is inconsistent — accidental Graph upgrade in production and sandbox org issues remain unaddressed." },
-  { id:"eac-setup", name:"EAC Setup, Configuration & Licensing", caseCount:55, coverage:"partial", recommended:["ka"], created:{ka:1,voc:0}, kaTitle:"How to troubleshoot EAC setup failures — license mismatch, Field Mapping tab missing, greyed-out configuration, and 'Failed to save the config' error in Production", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"email-deliverability", name:"Email Deliverability & Relay", caseCount:38, coverage:"partial", recommended:["ka"], created:{ka:1,voc:0}, kaTitle:"How to configure Salesforce email relay via Microsoft Exchange Online and resolve DMARC alignment failures when sending to Outlook recipients", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"isv-domain-whitelist", name:"ISV Partner Domain Whitelisting", caseCount:25, coverage:"gap", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to request ISV Partner Domain whitelisting for system notification deliverability — batch submission process and required org ID format", vocTitle:"", priorityRank:3, priorityReason:"25 cases pod-wide, no KA exists. High repetitive cost — all engineers handling manually with no shared runbook." },
-  { id:"outlook-calendar-sync", name:"Outlook Calendar & Attendee Sync", caseCount:29, coverage:"partial", recommended:["ka"], created:{ka:1,voc:0}, kaTitle:"How to troubleshoot Outlook calendar events showing as 'Busy' in Salesforce and inconsistent attendee sync between Microsoft 365 and Salesforce via EAC", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"chatter-notifications", name:"Chatter & Email Notifications", caseCount:22, coverage:"covered", recommended:[], created:{ka:2,voc:0}, kaTitle:"", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"mfa-security", name:"MFA / Phishing-Resistant Authentication", caseCount:20, coverage:"partial", recommended:["ka"], created:{ka:2,voc:0}, kaTitle:"How to request a phishing-resistant MFA enforcement extension for privileged users — justification template and required information (Summer '26 deadline)", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"email-change", name:"Email Change & User Domain Management", caseCount:18, coverage:"partial", recommended:["ka"], created:{ka:1,voc:0}, kaTitle:"How to change a user's email address as a Salesforce admin without requiring the user's own login — verification link behavior and workarounds", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"sandbox-data-cloud", name:"Sandbox & Data Cloud Connectivity", caseCount:14, coverage:"gap", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to clear a stale Data Cloud companion org binding after sandbox refresh — resolving 'already has a connection with a Data Cloud home org' error", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"salesforce-inbox", name:"Salesforce Inbox / Email Integration", caseCount:16, coverage:"gap", recommended:["ka","voc"], created:{ka:0,voc:0}, kaTitle:"How to diagnose Salesforce Inbox add-in failures in Outlook — manifest deployment errors, add-in not loading, and email logging not syncing to CRM", vocTitle:"Salesforce Inbox add-in repeatedly breaking after Microsoft 365 tenant policy updates — customers unable to log emails without manual workaround", priorityRank:0, priorityReason:"" },
-  { id:"flow-email-actions", name:"Flow / Process Builder Email Actions", caseCount:15, coverage:"partial", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to troubleshoot Flow email action failures — From Address validation errors, email not sent when flow runs as system user, and org-wide address permission issues", vocTitle:"", priorityRank:0, priorityReason:"" }
+var CASES = [
+  {num:"473781107", subject:"Unexpected behavior in productRevenueSchedules when changing quantity", owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"473487691", subject:"EAC Sync issue",                                                        owner:"Rohit Gilda",      manager:"Suchetana CI"},
+  {num:"473487692", subject:"Partial Sandbox Refresh Pending In Queue",                              owner:"Md Zeeshan Ahmad", manager:"Ankur Mishra"},
+  {num:"473487694", subject:"Tableau Cloud data auto-refresh not working",                           owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
+  {num:"c001",      subject:"Flow not triggering on record update",                                  owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"c002",      subject:"Process Builder migration to Flow",                                     owner:"Subhika Jha",      manager:"Mathews Abraham"},
+  {num:"c003",      subject:"Apex CPU limit exceeded in batch job",                                  owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
+  {num:"c004",      subject:"SOQL query governor limit 101 rows",                                    owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"c005",      subject:"Lightning web component not rendering in mobile",                       owner:"Rohit Gilda",      manager:"Suchetana CI"},
+  {num:"c006",      subject:"Email to Case attachment missing",                                      owner:"Subhika Jha",      manager:"Mathews Abraham"},
+  {num:"c007",      subject:"Sandbox refresh stuck in pending",                                      owner:"Md Zeeshan Ahmad", manager:"Ankur Mishra"},
+  {num:"c008",      subject:"Duplicate rules not working on Lead conversion",                        owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"c009",      subject:"REST API callout timeout in production",                                owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
+  {num:"c010",      subject:"Permission set not granting field access",                              owner:"Rohit Gilda",      manager:"Suchetana CI"},
+  {num:"c011",      subject:"Salesforce Inbox not syncing calendar",                                 owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
+  {num:"c012",      subject:"Custom metadata type deployment error",                                 owner:"Subhika Jha",      manager:"Mathews Abraham"},
+  {num:"c013",      subject:"Data loader upsert failing on external ID",                             owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
+  {num:"c014",      subject:"EAC activity not syncing to Salesforce",                               owner:"Rohit Gilda",      manager:"Suchetana CI"},
+  {num:"c015",      subject:"Screen flow next button not visible on mobile",                         owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"c016",      subject:"Approval process email notification not sent",                         owner:"Subhika Jha",      manager:"Mathews Abraham"},
+  {num:"c017",      subject:"Apex trigger recursion infinite loop",                                  owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
+  {num:"c018",      subject:"Login IP restriction locking out users",                                owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
+  {num:"c019",      subject:"Tableau Cloud refresh schedule not working",                            owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
+  {num:"c020",      subject:"productRevenueSchedule quantity price recalculation",                   owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"c021",      subject:"Flow interview fault path not executing",                               owner:"Subhika Jha",      manager:"Mathews Abraham"},
+  {num:"c022",      subject:"Too many SOQL queries 101 error in async context",                      owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
+  {num:"c023",      subject:"Sandbox org not available after refresh",                               owner:"Md Zeeshan Ahmad", manager:"Ankur Mishra"},
+  {num:"c024",      subject:"Winter release critical update breaking flows",                         owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"c025",      subject:"Data export service schedule not triggering",                           owner:"Rohit Gilda",      manager:"Suchetana CI"},
+  {num:"c026",      subject:"Named credential OAuth token refresh error",                            owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
+  {num:"c027",      subject:"LWC wire service returning null data",                                  owner:"Rohit Gilda",      manager:"Suchetana CI"},
+  {num:"c028",      subject:"Sharing rule not granting record access",                               owner:"Subhika Jha",      manager:"Mathews Abraham"},
+  {num:"c029",      subject:"Email deliverability bouncing in sandbox",                              owner:"Amith TG",        manager:"Mathews Abraham"},
+  {num:"c030",      subject:"Omni-Channel routing not assigning cases to queue",                     owner:"Jonathan Weng",    manager:"Francesca Settembrino"}
 ];
 
-const THEMES_MATHEWS_TEAM = [
-  { id:"email-domain-verification", name:"Email Domain Verification & DKIM", caseCount:234, coverage:"partial", recommended:["ka","voc"], created:{ka:3,voc:2}, kaTitle:"How to resolve email domain verification failure and DKIM key activation issues after Salesforce Summer '26 authorized domain enforcement", vocTitle:"Summer '26 email domain enforcement generating mass repeated warnings and delivery disruptions for admins who already have DKIM configured", priorityRank:1, priorityReason:"234 cases team-wide (20% of load). 3 KAs exist but contradict each other on ISV flows — consolidation and a definitive VOC needed." },
-  { id:"eac-migration", name:"EAC Migration — EWS / Lightning Sync to MS Graph", caseCount:187, coverage:"partial", recommended:["ka"], created:{ka:5,voc:1}, kaTitle:"How to complete EAC migration from EWS or Lightning Sync to Microsoft Graph API — step-by-step and common failure scenarios", vocTitle:"", priorityRank:2, priorityReason:"EWS deadline pressure across all pods. 5 KAs written team-wide but inconsistent — no canonical source." },
-  { id:"eac-setup", name:"EAC Setup, Configuration & Licensing", caseCount:155, coverage:"partial", recommended:["ka"], created:{ka:4,voc:0}, kaTitle:"How to troubleshoot EAC setup failures — license mismatch, Field Mapping tab missing, greyed-out configuration, and 'Failed to save the config' error in Production", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"email-deliverability", name:"Email Deliverability & Relay", caseCount:112, coverage:"partial", recommended:["ka"], created:{ka:3,voc:1}, kaTitle:"How to configure Salesforce email relay via Microsoft Exchange Online and resolve DMARC alignment failures when sending to Outlook recipients", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"isv-domain-whitelist", name:"ISV Partner Domain Whitelisting", caseCount:78, coverage:"gap", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to request ISV Partner Domain whitelisting for system notification deliverability — batch submission process and required org ID format", vocTitle:"", priorityRank:3, priorityReason:"78 cases team-wide with zero KA coverage. Entire team handling manually — highest per-case cost of any gap." },
-  { id:"outlook-calendar-sync", name:"Outlook Calendar & Attendee Sync", caseCount:88, coverage:"partial", recommended:["ka"], created:{ka:2,voc:0}, kaTitle:"How to troubleshoot Outlook calendar events showing as 'Busy' in Salesforce and inconsistent attendee sync between Microsoft 365 and Salesforce via EAC", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"chatter-notifications", name:"Chatter & Email Notifications", caseCount:65, coverage:"covered", recommended:[], created:{ka:5,voc:0}, kaTitle:"", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"mfa-security", name:"MFA / Phishing-Resistant Authentication", caseCount:59, coverage:"partial", recommended:["ka"], created:{ka:4,voc:1}, kaTitle:"How to request a phishing-resistant MFA enforcement extension for privileged users — justification template and required information (Summer '26 deadline)", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"email-change", name:"Email Change & User Domain Management", caseCount:47, coverage:"partial", recommended:["ka"], created:{ka:2,voc:0}, kaTitle:"How to change a user's email address as a Salesforce admin without requiring the user's own login — verification link behavior and workarounds", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"sandbox-data-cloud", name:"Sandbox & Data Cloud Connectivity", caseCount:41, coverage:"gap", recommended:["ka"], created:{ka:1,voc:0}, kaTitle:"How to clear a stale Data Cloud companion org binding after sandbox refresh — resolving 'already has a connection with a Data Cloud home org' error", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"salesforce-inbox", name:"Salesforce Inbox / Email Integration", caseCount:52, coverage:"gap", recommended:["ka","voc"], created:{ka:1,voc:0}, kaTitle:"How to diagnose Salesforce Inbox add-in failures in Outlook — manifest deployment errors, add-in not loading, and email logging not syncing to CRM", vocTitle:"Salesforce Inbox add-in repeatedly breaking after Microsoft 365 tenant policy updates", priorityRank:0, priorityReason:"" },
-  { id:"flow-email-actions", name:"Flow / Process Builder Email Actions", caseCount:48, coverage:"partial", recommended:["ka"], created:{ka:2,voc:0}, kaTitle:"How to troubleshoot Flow email action failures — From Address validation errors, email not sent when flow runs as system user, and org-wide address permission issues", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"omni-channel-routing", name:"Omni-Channel Routing & Presence", caseCount:39, coverage:"gap", recommended:["ka"], created:{ka:0,voc:0}, kaTitle:"How to troubleshoot Omni-Channel agents stuck in 'Available' state not receiving work items — routing configuration gaps and presence status sync failures", vocTitle:"", priorityRank:0, priorityReason:"" },
-  { id:"connected-app-oauth", name:"Connected App & OAuth Token Issues", caseCount:40, coverage:"partial", recommended:["ka"], created:{ka:2,voc:0}, kaTitle:"How to resolve Connected App OAuth token expiry and 'invalid_grant' errors — refresh token rotation policy mismatches and session policy conflicts", vocTitle:"", priorityRank:0, priorityReason:"" }
+var KA = [
+  {num:"000385111", title:"Too many API email invocations error – Apex",                 author:"Sagarika B"},
+  {num:"000386160", title:"Debug Salesforce Web Service Callouts Using SoapUI",          author:"Sagarika B"},
+  {num:"000383497", title:"URL redirects in the Salesforce mobile app",                  author:"Sagarika B"},
+  {num:"000382001", title:"Resolving Apex CPU Time Limit Exceeded in Batch Jobs",        author:"Aditya Kumar Singh"},
+  {num:"000382002", title:"SOQL 101 query limit governor error guide",                   author:"Aditya Kumar Singh"},
+  {num:"000382003", title:"Sandbox Refresh Stuck in Pending – Steps to Resolve",         author:"Md Zeeshan Ahmad"},
+  {num:"000382004", title:"Flow not triggering on record update – common causes",         author:"Amith TG"},
+  {num:"000382005", title:"EAC Activity Sync – Troubleshooting Einstein Activity Capture",author:"Rohit Gilda"},
+  {num:"000382006", title:"Apex Trigger Recursion – Prevention Best Practices",          author:"Aditya Kumar Singh"},
+  {num:"000382007", title:"Login IP Restriction Lockout Resolution Steps",               author:"Jonathan Weng"}
 ];
 
-// ── People data ────────────────────────────────────────────────────────────────
-// group: used to render section headers in the person list
-// themes: null = no data collected yet
+var TOPIC_RULES = [
+  {t:"Flow / Process Builder",  kw:["flow","process builder","screen flow","interview","fault path"]},
+  {t:"Apex & Governor Limits",  kw:["apex","cpu limit","soql","too many","governor","trigger","recursion","async","batch"]},
+  {t:"EAC / Inbox Sync",        kw:["eac","inbox","sync","activity","einstein activity"]},
+  {t:"Sandbox & DevOps",        kw:["sandbox","refresh","pending","deployment","metadata"]},
+  {t:"Revenue Schedules / CPQ", kw:["revenue","schedule","quantity","price","recalc","cpq","product"]},
+  {t:"Lightning / LWC",         kw:["lightning","lwc","mobile","component","render","wire"]},
+  {t:"Security & Access",       kw:["permission","sharing","ip restriction","login","access"]},
+  {t:"Integration & API",       kw:["rest api","api","callout","oauth","named credential","timeout","soap"]},
+  {t:"Data Management",         kw:["data loader","upsert","external id","export","duplicate"]},
+  {t:"Email & Notifications",   kw:["email","notification","approval","deliverability","bounce","attachment"]},
+  {t:"Omni-Channel / Routing",  kw:["omni","routing","assign","queue"]},
+  {t:"Tableau / Analytics",     kw:["tableau","analytics"]}
+];
 
-const SCOPE_PEOPLE = {
-  engineer: [
-    // ── Mathews Abraham → Mayank Gairola → Sushmita Srivastava ──
-    { id:"harika-koneti",              name:"Harika Koneti",              group:"Mayank Gairola · Sushmita Srivastava", role:"Sr TSE",    totalCases:123,  themes: THEMES_HARIKA },
-    { id:"giripranesh-murali",         name:"Giripranesh Murali",         group:"Mayank Gairola · Sushmita Srivastava", role:"Sr TSE",    totalCases:10,   themes: null },
-    { id:"pallavi-keshavrao-gawande",  name:"Pallavi Keshavrao Gawande",  group:"Mayank Gairola · Sushmita Srivastava", role:"Sr TSE",    totalCases:69,   themes: null },
-    { id:"charan-kumar-suguri",        name:"Charan Kumar Suguri",        group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:111,  themes: null },
-    { id:"balachandra-maha-samudam",   name:"Balachandra Maha Samudam",   group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:66,   themes: null },
-    { id:"deepthy-john",               name:"Deepthy John",               group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:0,    themes: null },
-    { id:"priya-dharshini-m",          name:"Priya Dharshini M",          group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:75,   themes: null },
-    { id:"alamelu-arumugam",           name:"Alamelu Arumugam",           group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:55,   themes: null },
-    { id:"hariharan-m",                name:"Hariharan M",                group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:62,   themes: null },
-    { id:"subhasweta-behera",          name:"Subhasweta Behera",          group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:78,   themes: null },
-    { id:"satakshi-banik",             name:"Satakshi Banik",             group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:45,   themes: null },
-    { id:"srishti-suman",              name:"Srishti Suman",              group:"Mayank Gairola · Sushmita Srivastava", role:"TSE",       totalCases:13,   themes: null },
-    // ── Mathews Abraham → Priyanka Mukherjee ──
-    { id:"himanshu-kumar-sinha",       name:"Himanshu Kumar Sinha",       group:"Mayank Gairola · Priyanka Mukherjee",  role:"Sr TSE",    totalCases:58,   themes: null },
-    { id:"ayush-sasspal",              name:"Ayush Sasspal",              group:"Mayank Gairola · Priyanka Mukherjee",  role:"Sr TSE",    totalCases:68,   themes: null },
-    { id:"swati-gupta",                name:"Swati Gupta",                group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:38,   themes: null },
-    { id:"vijay-kumar-uc",             name:"Vijay Kumar U C",            group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:21,   themes: null },
-    { id:"akrity-kumari",              name:"Akrity Kumari",              group:"Mayank Gairola · Priyanka Mukherjee",  role:"Assoc TSE", totalCases:82,   themes: null },
-    { id:"granthana-g",                name:"Granthana G",                group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:85,   themes: null },
-    { id:"anju-udayakumar",            name:"Anju Udayakumar",            group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:66,   themes: null },
-    { id:"neha-upwanshi",              name:"Neha Upwanshi",              group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:14,   themes: null },
-    { id:"sonali-suriyanarayanan",     name:"Sonali Suriyanarayanan",     group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:86,   themes: null },
-    { id:"ashish-vyas",                name:"Ashish Vyas",                group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:42,   themes: null },
-    { id:"aditya-kulkarni",            name:"Aditya Kulkarni",            group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:5,    themes: null },
-    { id:"pankaj-kumar-dasgupta",      name:"Pankaj Kumar Dasgupta",      group:"Mayank Gairola · Priyanka Mukherjee",  role:"TSE",       totalCases:51,   themes: null },
-    // ── Mathews Abraham → Remya Krishnan ──
-    { id:"paras-ahuja",                name:"Paras Ahuja",                group:"Mayank Gairola · Remya Krishnan",       role:"Assoc TSE", totalCases:71,   themes: null },
-    { id:"anu-varghese",               name:"Anu Varghese",               group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:72,   themes: null },
-    { id:"priyadarshini-sr",           name:"Priyadarshini SR",           group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:127,  themes: null },
-    { id:"amith-tg",                   name:"Amith TG",                   group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:90,   themes: null },
-    { id:"seema-bidare",               name:"Seema Bidare",               group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:62,   themes: null },
-    { id:"sunil-dalawai",              name:"Sunil Dalawai",              group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:71,   themes: null },
-    { id:"kotte-amruta-lakshmi",       name:"Kotte Amruta Lakshmi",       group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:70,   themes: null },
-    { id:"sangeetha-y",                name:"Sangeetha Y",                group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:0,    themes: null },
-    { id:"keerthi-vissamsetty",        name:"Keerthi Vissamsetty",        group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:58,   themes: null },
-    { id:"yathish-v",                  name:"Yathish V",                  group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:86,   themes: null },
-    { id:"bhavani-konderu",            name:"Bhavani Konderu",            group:"Mayank Gairola · Remya Krishnan",       role:"TSE",       totalCases:66,   themes: null },
-    // ── Talita de Oliveira (direct) ──
-    { id:"ainara-hermoso",             name:"Ainara Hermoso",             group:"Talita de Oliveira",                    role:"TSE",       totalCases:21,   themes: null },
-    { id:"alessandro-zito",            name:"Alessandro Zito",            group:"Talita de Oliveira",                    role:"TSE",       totalCases:23,   themes: null },
-    { id:"augustina-vornehm",          name:"Augustina Vornehm",          group:"Talita de Oliveira",                    role:"TSE",       totalCases:11,   themes: null },
-    { id:"chiamaka-offoaro-nasri",     name:"Chiamaka Mike Daniel Offoaro Nasri", group:"Talita de Oliveira",            role:"TSE",       totalCases:23,   themes: null },
-    { id:"clement-boissonnade",        name:"Clément Boissonnade",        group:"Talita de Oliveira",                    role:"TSE",       totalCases:22,   themes: null },
-    { id:"enrico-dustin-hoffmann",     name:"Enrico Dustin Hoffmann",     group:"Talita de Oliveira",                    role:"Sr TSE",    totalCases:48,   themes: null },
-    { id:"jamie-de-jongh",             name:"Jamie de Jongh",             group:"Talita de Oliveira",                    role:"TSE",       totalCases:32,   themes: null },
-    { id:"juan-carlos-cordovez",       name:"Juan Carlos Cordovez-Mantilla", group:"Talita de Oliveira",                 role:"TSE",       totalCases:50,   themes: null },
-    { id:"leona-wolff",                name:"Leona Wolff",                group:"Talita de Oliveira",                    role:"TSE",       totalCases:9,    themes: null },
-    { id:"luigi-toto",                 name:"Luigi Toto",                 group:"Talita de Oliveira",                    role:"TSE",       totalCases:64,   themes: null },
-    { id:"maria-schalk",               name:"Maria Schalk",               group:"Talita de Oliveira",                    role:"TSE",       totalCases:40,   themes: null },
-    { id:"marie-rose-schmoetten",      name:"Marie-Rose Schmoetten",      group:"Talita de Oliveira",                    role:"TSE",       totalCases:41,   themes: null },
-    { id:"oliver-dovgvillo",           name:"Oliver Dovgvillo",           group:"Talita de Oliveira",                    role:"TSE",       totalCases:70,   themes: null },
-    { id:"raphael-herve",              name:"Raphael Pierre Fabien Herve", group:"Talita de Oliveira",                   role:"TSE",       totalCases:47,   themes: null },
-    { id:"rebecca-oberto",             name:"Rebecca Oberto",             group:"Talita de Oliveira",                    role:"TSE",       totalCases:26,   themes: null },
-    { id:"sofia-horvath",              name:"Sofia Horvath",              group:"Talita de Oliveira",                    role:"TSE",       totalCases:40,   themes: null },
-    // ── Anurikt Wadhwa → Amit Daga ──
-    { id:"akshay-srivastava",          name:"Akshay Srivastava",          group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:47,   themes: null },
-    { id:"aman-lalwani",               name:"Aman Lalwani",               group:"Anurikt Wadhwa · Amit Daga",            role:"Sr TSE",    totalCases:64,   themes: null },
-    { id:"ayeshea-lyngdoh",            name:"Ayeshea Lyngdoh",            group:"Anurikt Wadhwa · Amit Daga",            role:"Assoc TSE", totalCases:90,   themes: null },
-    { id:"kritagya-sharma",            name:"Kritagya Sharma",            group:"Anurikt Wadhwa · Amit Daga",            role:"Sr TSE",    totalCases:87,   themes: null },
-    { id:"madhu-babu-krovvidi",        name:"Madhu Babu Krovvidi",        group:"Anurikt Wadhwa · Amit Daga",            role:"Assoc TSE", totalCases:87,   themes: null },
-    { id:"manasa-madam",               name:"Manasa Madam",               group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:55,   themes: null },
-    { id:"neha-ghumbare",              name:"Neha Ghumbare",              group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:0,    themes: null },
-    { id:"nishat-shaikh",              name:"Nishat Shaikh",              group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:68,   themes: null },
-    { id:"pranav-tatikonda",           name:"Pranav Tatikonda",           group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:61,   themes: null },
-    { id:"ramani-bamane",              name:"Ramani Bamane",              group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:77,   themes: null },
-    { id:"sai-anish-sidhireddy",       name:"Sai Anish Sidhireddy",       group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:49,   themes: null },
-    { id:"shivam-sharma",              name:"Shivam Sharma",              group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:112,  themes: null },
-    { id:"sourabh-more",               name:"Sourabh More",               group:"Anurikt Wadhwa · Amit Daga",            role:"TSE",       totalCases:49,   themes: null },
-    { id:"sparshi-agrawal",            name:"Sparshi Agrawal",            group:"Anurikt Wadhwa · Amit Daga",            role:"Assoc TSE", totalCases:78,   themes: null },
-    { id:"supriya-vunnava",            name:"Supriya Vunnava",            group:"Anurikt Wadhwa · Amit Daga",            role:"Assoc TSE", totalCases:61,   themes: null },
-    // ── Anurikt Wadhwa → Deep Sanghani ──
-    { id:"aishwarya-murmu",            name:"Aishwarya Murmu",            group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:73,   themes: null },
-    { id:"arsha-sharma",               name:"Arsha Sharma",               group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:55,   themes: null },
-    { id:"ashutosh-hore",              name:"Ashutosh Hore",              group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:78,   themes: null },
-    { id:"divya-raghavan",             name:"Divya Raghavan",             group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:97,   themes: null },
-    { id:"durgasi-santhosh-kumar",     name:"Durgasi Santhosh Kumar",     group:"Anurikt Wadhwa · Deep Sanghani",        role:"Assoc TSE", totalCases:81,   themes: null },
-    { id:"gaurav-jaiswal",             name:"Gaurav Rakesh Jaiswal",      group:"Anurikt Wadhwa · Deep Sanghani",        role:"Sr TSE",    totalCases:85,   themes: null },
-    { id:"jaipal-reddy-patlolla",      name:"Jaipal Reddy Patlolla",      group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:43,   themes: null },
-    { id:"kunal-shelar",               name:"Kunal Shelar",               group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:111,  themes: null },
-    { id:"naincy-kamthan",             name:"Naincy Kamthan",             group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:88,   themes: null },
-    { id:"naren-penmetsa",             name:"Naren Sreeram Harish Varma Penmetsa", group:"Anurikt Wadhwa · Deep Sanghani", role:"TSE",    totalCases:88,   themes: null },
-    { id:"poonam-jadhav",              name:"Poonam Jadhav",              group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:95,   themes: null },
-    { id:"ramakrishna-putta",          name:"Ramakrishna Putta",          group:"Anurikt Wadhwa · Deep Sanghani",        role:"Sr TSE",    totalCases:0,    themes: null },
-    { id:"rohan-kamble",               name:"Rohan Kamble",               group:"Anurikt Wadhwa · Deep Sanghani",        role:"Sr TSE",    totalCases:143,  themes: null },
-    { id:"sruti-aich",                 name:"Sruti Aich",                 group:"Anurikt Wadhwa · Deep Sanghani",        role:"Assoc TSE", totalCases:97,   themes: null },
-    { id:"venkat-reddy-marivina",      name:"Venkat Reddy Marivina",      group:"Anurikt Wadhwa · Deep Sanghani",        role:"TSE",       totalCases:57,   themes: null },
-    // ── Anurikt Wadhwa → Mayur Rohra ──
-    { id:"aditya-mishra",              name:"Aditya Mishra",              group:"Anurikt Wadhwa · Mayur Rohra",          role:"Sr TSE",    totalCases:55,   themes: null },
-    { id:"ashitha-srungavarapu",       name:"Ashitha Srungavarapu",       group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:102,  themes: null },
-    { id:"bhaskar-choubey",            name:"Bhaskar Choubey",            group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:57,   themes: null },
-    { id:"mohammad-tazeem-khan",       name:"Mohammad Tazeem Khan",       group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:63,   themes: null },
-    { id:"naga-krishnaveni-achanta",   name:"Naga Krishnaveni Varaha Lakshmi Achanta", group:"Anurikt Wadhwa · Mayur Rohra", role:"TSE",  totalCases:43,   themes: null },
-    { id:"pooja-borkar",               name:"Pooja Borkar",               group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:0,    themes: null },
-    { id:"prabhu-teja-yellamelli",     name:"Prabhu Teja Yellamelli",     group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:41,   themes: null },
-    { id:"priyanka-polam",             name:"Priyanka Polam",             group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:0,    themes: null },
-    { id:"ruchika-gupta",              name:"Ruchika Gupta",              group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:59,   themes: null },
-    { id:"sanskruti-hembade",          name:"Sanskruti Hembade",          group:"Anurikt Wadhwa · Mayur Rohra",          role:"Assoc TSE", totalCases:114,  themes: null },
-    { id:"shaik-rajiya-begum",         name:"Shaik Rajiya Begum",         group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:40,   themes: null },
-    { id:"surepally-sai-chand",        name:"Surepally Sai chand",        group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:92,   themes: null },
-    { id:"tanuj-arora",                name:"Tanuj Arora",                group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:39,   themes: null },
-    { id:"yaswant-bommi",              name:"Yaswant Bommi",              group:"Anurikt Wadhwa · Mayur Rohra",          role:"TSE",       totalCases:71,   themes: null },
-    // ── Anurikt Wadhwa → Pushpa Devaraj ──
-    { id:"akhila-bodi",                name:"Akhila Bodi",                group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"Assoc TSE", totalCases:66,   themes: null },
-    { id:"bhavana-paparapatti",        name:"Bhavana Paparapatti",        group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"Assoc TSE", totalCases:64,   themes: null },
-    { id:"jagadish-chithrala",         name:"Jagadish Chithrala",         group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"Assoc TSE", totalCases:9,    themes: null },
-    { id:"krithika-reddy-k",           name:"Krithika Reddy K",           group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"Assoc TSE", totalCases:93,   themes: null },
-    { id:"likhilswamy-thota",          name:"Likhilswamy Thota",          group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"Assoc TSE", totalCases:116,  themes: null },
-    { id:"md-athar",                   name:"Md Athar",                   group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"TSE",       totalCases:94,   themes: null },
-    { id:"mohammad-yusuf-idrisi",      name:"Mohammad Yusuf Idrisi",      group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"TSE",       totalCases:56,   themes: null },
-    { id:"pramodh-korivi",             name:"Pramodh Korivi",             group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"TSE",       totalCases:63,   themes: null },
-    { id:"prashanti-chavali",          name:"Prashanti Chavali",          group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"Sr TSE",    totalCases:170,  themes: null },
-    { id:"shajidha-shaik",             name:"Shajidha Shaik",             group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"TSE",       totalCases:6,    themes: null },
-    { id:"shashwat-vairale",           name:"Shashwat Vairale",           group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"Sr TSE",    totalCases:71,   themes: null },
-    { id:"sri-nagalaxmi-anika",        name:"Sri Nagalaxmi Anika",        group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"TSE",       totalCases:60,   themes: null },
-    { id:"surya-prakash-sakthivel",    name:"Surya Prakash Sakthivel",    group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"TSE",       totalCases:37,   themes: null },
-    { id:"syeda-saba-siddiqua",        name:"Syeda Saba Siddiqua",        group:"Anurikt Wadhwa · Pushpa Devaraj",       role:"TSE",       totalCases:44,   themes: null },
-    // ── Mudit Mathur → Ankur Mishra ──
-    { id:"abhishek-rajput",            name:"Abhishek Rajput",            group:"Mudit Mathur · Ankur Mishra",           role:"Assoc TSE", totalCases:144,  themes: null },
-    { id:"anshit-bhargava",            name:"Anshit Bhargava",            group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:46,   themes: null },
-    { id:"anupkumar-ankalwar",         name:"Anupkumar Ankalwar",         group:"Mudit Mathur · Ankur Mishra",           role:"Sr TSE",    totalCases:62,   themes: null },
-    { id:"mamatha-panjala",            name:"Mamatha Panjala",            group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:69,   themes: null },
-    { id:"nidhi-sheet",                name:"Nidhi Sheet",                group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:101,  themes: null },
-    { id:"noopur-kawale",              name:"Noopur Kawale",              group:"Mudit Mathur · Ankur Mishra",           role:"Assoc TSE", totalCases:0,    themes: null },
-    { id:"pradyumn-sharma",            name:"Pradyumn Sharma",            group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:55,   themes: null },
-    { id:"rachitha-donkeshwaram",      name:"Rachitha Donkeshwaram",      group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:45,   themes: null },
-    { id:"rakesh-gulivindala",         name:"Rakesh Gulivindala",         group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:43,   themes: null },
-    { id:"sachin-kumar-naidi",         name:"Sachin Kumar Naidi",         group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:15,   themes: null },
-    { id:"sai-charith-nagubandi",      name:"Sai Charith Nagubandi",      group:"Mudit Mathur · Ankur Mishra",           role:"Sr TSE",    totalCases:54,   themes: null },
-    { id:"saksham-shah",               name:"Saksham Shah",               group:"Mudit Mathur · Ankur Mishra",           role:"Assoc TSE", totalCases:47,   themes: null },
-    { id:"sanket-kine",                name:"Sanket Kine",                group:"Mudit Mathur · Ankur Mishra",           role:"TSE",       totalCases:47,   themes: null },
-    { id:"sneha-gupta",                name:"Sneha Gupta",                group:"Mudit Mathur · Ankur Mishra",           role:"Assoc TSE", totalCases:101,  themes: null },
-    { id:"suman-kumar-pramanik",       name:"Suman Kumar Pramanik",       group:"Mudit Mathur · Ankur Mishra",           role:"Assoc TSE", totalCases:96,   themes: null },
-    // ── Mudit Mathur → Anil Maharana ──
-    { id:"abdul-muqeeth-mohammed",     name:"Abdul Muqeeth Mohammed",     group:"Mudit Mathur · Anil Maharana",          role:"Assoc TSE", totalCases:69,   themes: null },
-    { id:"akhila-kaparthi",            name:"Akhila Kaparthi",            group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:58,   themes: null },
-    { id:"ayushi-ghosh",               name:"Ayushi Ghosh",               group:"Mudit Mathur · Anil Maharana",          role:"Assoc TSE", totalCases:122,  themes: null },
-    { id:"dev-priya-pandey",           name:"Dev Priya Pandey",           group:"Mudit Mathur · Anil Maharana",          role:"Assoc TSE", totalCases:53,   themes: null },
-    { id:"ganesh-ramavath",            name:"Ganesh Ramavath",            group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:56,   themes: null },
-    { id:"harika-mopada",              name:"Harika Mopada",              group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:102,  themes: null },
-    { id:"haritha-rachuri",            name:"Haritha Rachuri",            group:"Mudit Mathur · Anil Maharana",          role:"Sr TSE",    totalCases:60,   themes: null },
-    { id:"pranay-kumar",               name:"Pranay Kumar",               group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:86,   themes: null },
-    { id:"rakshith-kadari",            name:"Rakshith Karthikeya Kadari", group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:91,   themes: null },
-    { id:"sahithi-gayam",              name:"Sahithi Gayam",              group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:68,   themes: null },
-    { id:"shivam-mishra",              name:"Shivam Mishra",              group:"Mudit Mathur · Anil Maharana",          role:"Sr TSE",    totalCases:27,   themes: null },
-    { id:"suryateja-birudukota",       name:"Suryateja Birudukota",       group:"Mudit Mathur · Anil Maharana",          role:"Sr TSE",    totalCases:87,   themes: null },
-    { id:"sushma-bhavani-lagisetty",   name:"Sushma Bhavani Lagisetty",   group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:0,    themes: null },
-    { id:"tejaswinee-khot",            name:"Tejaswinee Khot",            group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:66,   themes: null },
-    { id:"yadhu-nandan-karumanchi",    name:"Yadhu Nandan Karumanchi",    group:"Mudit Mathur · Anil Maharana",          role:"TSE",       totalCases:45,   themes: null },
-    // ── Mudit Mathur → Durfshan Wani ──
-    { id:"anant-kumar",                name:"Anant Kumar",                group:"Mudit Mathur · Durfshan Wani",          role:"Sr TSE",    totalCases:0,    themes: null },
-    { id:"ansuman-kar",                name:"Ansuman Kar",                group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:104,  themes: null },
-    { id:"ayushi-parmar",              name:"Ayushi Parmar",              group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:59,   themes: null },
-    { id:"harshad-bogawat",            name:"Harshad Bogawat",            group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:81,   themes: null },
-    { id:"lakshman-katuri",            name:"Lakshman Katuri",            group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:41,   themes: null },
-    { id:"mukesh-sai-varma-mudunuri",  name:"Mukesh Sai Varma Mudunuri",  group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:101,  themes: null },
-    { id:"naga-ajay-kumar-dp",         name:"Naga Ajay Kumar D P",        group:"Mudit Mathur · Durfshan Wani",          role:"Assoc TSE", totalCases:48,   themes: null },
-    { id:"priya-ranjan",               name:"Priya Ranjan",               group:"Mudit Mathur · Durfshan Wani",          role:"Sr TSE",    totalCases:65,   themes: null },
-    { id:"raamdivya-b",                name:"Raamdivya B",                group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:44,   themes: null },
-    { id:"sai-shashank-banala",        name:"Sai Shashank Banala",        group:"Mudit Mathur · Durfshan Wani",          role:"Sr TSE",    totalCases:40,   themes: null },
-    { id:"sanjay-ravi-borkar",         name:"Sanjay Ravi Borkar",         group:"Mudit Mathur · Durfshan Wani",          role:"Sr TSE",    totalCases:110,  themes: null },
-    { id:"soumitra-sabnis",            name:"Soumitra Sabnis",            group:"Mudit Mathur · Durfshan Wani",          role:"Sr TSE",    totalCases:58,   themes: null },
-    { id:"sravan-kumar-kathala",       name:"Sravan Kumar Kathala",       group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:29,   themes: null },
-    { id:"sushma-ediga",               name:"Sushma Ediga",               group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:61,   themes: null },
-    { id:"yojana-gajavelli",           name:"Yojana Gajavelli",           group:"Mudit Mathur · Durfshan Wani",          role:"TSE",       totalCases:107,  themes: null },
-    // ── Ajith Anand → Chandra Bhanu Shukla ──
-    { id:"abhinav-kumar-sig",          name:"Abhinav Kumar (SIG)",        group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:18,   themes: null },
-    { id:"aksh-kadia",                 name:"Aksh Kadia",                 group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:100,  themes: null },
-    { id:"anindita-hazra",             name:"Anindita Hazra",             group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:0,    themes: null },
-    { id:"darshan-ra",                 name:"Darshan R A",                group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:56,   themes: null },
-    { id:"muthubalaji-karuppasamy",    name:"Muthubalaji Karuppasamy",    group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:57,   themes: null },
-    { id:"nagaveni-kambar",            name:"Nagaveni Kambar",            group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:70,   themes: null },
-    { id:"nayana",                     name:"Nayana .",                   group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:68,   themes: null },
-    { id:"nirmala-botchu",             name:"Nirmala Botchu",             group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:32,   themes: null },
-    { id:"ranjitha-km",                name:"Ranjitha KM",                group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:78,   themes: null },
-    { id:"ranju-rajan",                name:"Ranju Rajan",                group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:48,   themes: null },
-    { id:"s-chetan-kumar",             name:"S Chetan Kumar",             group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:42,   themes: null },
-    { id:"sanghamitra-rajkhowa",       name:"Sanghamitra Rajkhowa",       group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:54,   themes: null },
-    { id:"shreya-chatterjee",          name:"Shreya Chatterjee",          group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:42,   themes: null },
-    { id:"yogesh-sundararaman",        name:"Yogesh Sundararaman",        group:"Ajith Anand · Chandra Bhanu Shukla",   role:"Sr TSE",    totalCases:29,   themes: null },
-    // ── Ajith Anand → Saicharan Reddy Kasireddy ──
-    { id:"abhinav-singh",              name:"Abhinav Singh",              group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:59,   themes: null },
-    { id:"aziz-sheikh",                name:"Aziz Sheikh",                group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:2,    themes: null },
-    { id:"chaitanya-sable",            name:"Chaitanya Sable",            group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:37,   themes: null },
-    { id:"himanshu-shekhar",           name:"Himanshu Shekhar",           group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:19,   themes: null },
-    { id:"kishore-goud",               name:"Kishore Goud",               group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:41,   themes: null },
-    { id:"mahender-bachali",           name:"Mahender Bachali",           group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:36,   themes: null },
-    { id:"mandar-joshi",               name:"Mandar Joshi",               group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:62,   themes: null },
-    { id:"manisha-saini",              name:"Manisha Saini",              group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:79,   themes: null },
-    { id:"nikhil-khandelwal",          name:"Nikhil Khandelwal",          group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:69,   themes: null },
-    { id:"pooja-bante",                name:"Pooja Bante",                group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:51,   themes: null },
-    { id:"ravali-bobba",               name:"Ravali Bobba",               group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:48,   themes: null },
-    { id:"sai-saraschandra-gudipati",  name:"Sai Saraschandra Gudipati",  group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:39,   themes: null },
-    { id:"sai-sri-ganapathineedi",     name:"Sai Sri Ganapathineedi",     group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:58,   themes: null },
-    { id:"sameem-sarkar",              name:"Sameem Sarkar",              group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:28,   themes: null },
-    { id:"sasidhar-kanuganti",         name:"Sasidhar Kanuganti",         group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:39,   themes: null },
-    { id:"siva-dornala",               name:"Siva Dornala",               group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:32,   themes: null },
-    { id:"subhadip-chatterjee",        name:"Subhadip Chatterjee",        group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:49,   themes: null },
-    { id:"sumasree-madichedu",         name:"Sumasree Madichedu",         group:"Ajith Anand · Saicharan Reddy Kasireddy", role:"Sr TSE", totalCases:50,   themes: null },
-    // ── Ajith Anand → Shyam Bihari ──
-    { id:"muni-venkata-rajesh-g",      name:"Muni Venkata Rajesh G",      group:"Ajith Anand · Shyam Bihari",            role:"Sr TSE",    totalCases:0,    themes: null },
-    // ── Ajith Anand → Saikumar Alapati ──
-    { id:"akash-kumar",                name:"Akash Kumar",                group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:71,   themes: null },
-    { id:"ankita-thakur",              name:"Ankita Thakur",              group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:38,   themes: null },
-    { id:"isha-gupta",                 name:"Isha Gupta (Sales Signature)", group:"Ajith Anand · Saikumar Alapati",      role:"Sr TSE",    totalCases:59,   themes: null },
-    { id:"jyoti-kumari",               name:"Jyoti Kumari (Sales Sig IST)", group:"Ajith Anand · Saikumar Alapati",      role:"Sr TSE",    totalCases:36,   themes: null },
-    { id:"manchireddy-ananthalaxmi",   name:"Manchireddy Ananthalaxmi Reddy", group:"Ajith Anand · Saikumar Alapati",    role:"Sr TSE",    totalCases:0,    themes: null },
-    { id:"nikita-vernekar",            name:"Nikita Vernekar",            group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:39,   themes: null },
-    { id:"pooja-r",                    name:"Pooja R",                    group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:52,   themes: null },
-    { id:"pratik-babar",               name:"Pratik Babar",               group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:70,   themes: null },
-    { id:"ravi-ritesh-kumar",          name:"Ravi Ritesh Kumar",          group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:38,   themes: null },
-    { id:"sachin-bhakare",             name:"Sachin Bhakare",             group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:50,   themes: null },
-    { id:"saikiran-enugurthi",         name:"Saikiran Enugurthi",         group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:20,   themes: null },
-    { id:"sakshi-nigam",               name:"Sakshi Nigam",               group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:36,   themes: null },
-    { id:"shaik-rafi",                 name:"Shaik Rafi",                 group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:55,   themes: null },
-    { id:"shyamal-kumar",              name:"Shyamal Kumar",              group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:44,   themes: null },
-    { id:"sreekantha-reddy-k",         name:"sreekantha Reddy k",         group:"Ajith Anand · Saikumar Alapati",        role:"Sr TSE",    totalCases:40,   themes: null },
-    // ── Swati Devsoth → Harish Alla ──
-    { id:"abdul-rahman",               name:"Abdul Rahman",               group:"Swati Devsoth · Harish Alla",           role:"Assoc TSE", totalCases:54,   themes: null },
-    { id:"abhishek-b",                 name:"Abhishek B",                 group:"Swati Devsoth · Harish Alla",           role:"Sr TSE",    totalCases:32,   themes: null },
-    { id:"akuthota-rasagna",           name:"Akuthota Rasagna",           group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:130,  themes: null },
-    { id:"architha-s",                 name:"Architha S",                 group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:54,   themes: null },
-    { id:"ashwini-dubey",              name:"Ashwini Dubey",              group:"Swati Devsoth · Harish Alla",           role:"Sr TSE",    totalCases:44,   themes: null },
-    { id:"atul-pawar",                 name:"Atul Pawar",                 group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:54,   themes: null },
-    { id:"avirup-dasgupta",            name:"Avirup Dasgupta",            group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:47,   themes: null },
-    { id:"bhagya-varshitha-pasunuri",  name:"Bhagya Varshitha Pasunuri",  group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:83,   themes: null },
-    { id:"chandu-nagulamilli",         name:"Chandu Nagulamilli",         group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:74,   themes: null },
-    { id:"guddu-kumar",                name:"Guddu Kumar",                group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:50,   themes: null },
-    { id:"lavanya-kumari-marri",       name:"Lavanya kumari Marri",       group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:65,   themes: null },
-    { id:"rehan-khan",                 name:"Rehan Khan",                 group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:67,   themes: null },
-    { id:"sai-praveen-kakkirala",      name:"Sai Praveen Kumar Kakkirala", group:"Swati Devsoth · Harish Alla",          role:"Sr TSE",    totalCases:86,   themes: null },
-    { id:"sai-suresh",                 name:"Sai Suresh",                 group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:0,    themes: null },
-    { id:"vaitheeshwari-e",            name:"Vaitheeshwari E",            group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:82,   themes: null },
-    { id:"vidya-patil",                name:"Vidya Patil",                group:"Swati Devsoth · Harish Alla",           role:"TSE",       totalCases:42,   themes: null },
-    // ── Swati Devsoth → Shikha Tripathi ──
-    { id:"akash-makker",               name:"Akash Makker",               group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:59,   themes: null },
-    { id:"ashwin-ganorkar",            name:"Ashwin Ganorkar",            group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:0,    themes: null },
-    { id:"hardik-saxena",              name:"Hardik Saxena",              group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:83,   themes: null },
-    { id:"harshith-pasumarthi",        name:"Harshith Pasumarthi",        group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:84,   themes: null },
-    { id:"hiranmayai-nemani",          name:"Hiranmayai Nemani",          group:"Swati Devsoth · Shikha Tripathi",       role:"Assoc TSE", totalCases:70,   themes: null },
-    { id:"karan-bilakhiya",            name:"Karan Bilakhiya",            group:"Swati Devsoth · Shikha Tripathi",       role:"Sr TSE",    totalCases:29,   themes: null },
-    { id:"krishna-chaitanya-naraharisetti", name:"Krishna Chaitanya Naraharisetti", group:"Swati Devsoth · Shikha Tripathi", role:"TSE", totalCases:44,   themes: null },
-    { id:"lakshmi-reddy-mula",         name:"Lakshmi Reddy Mula",         group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:130,  themes: null },
-    { id:"lily-mishra",                name:"Lily Mishra",                group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:66,   themes: null },
-    { id:"manasa-devi-velugula",       name:"Manasa Devi Velugula",       group:"Swati Devsoth · Shikha Tripathi",       role:"Assoc TSE", totalCases:77,   themes: null },
-    { id:"nagarjuna-guraja",           name:"Nagarjuna Guraja",           group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:62,   themes: null },
-    { id:"pratik-jadhav",              name:"Pratik Jadhav",              group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:64,   themes: null },
-    { id:"priya-kushwah",              name:"Priya Kushwah",              group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:0,    themes: null },
-    { id:"raj-kumar-akoju",            name:"Raj Kumar Akoju",            group:"Swati Devsoth · Shikha Tripathi",       role:"Sr TSE",    totalCases:93,   themes: null },
-    { id:"sai-kumar-raju-muddaluri",   name:"Sai Kumar Raju Muddaluri",   group:"Swati Devsoth · Shikha Tripathi",       role:"Assoc TSE", totalCases:59,   themes: null },
-    { id:"shivam-singh2",              name:"Shivam Singh",               group:"Swati Devsoth · Shikha Tripathi",       role:"TSE",       totalCases:66,   themes: null },
-    { id:"uma-datta-vedantam",         name:"Uma Datta Sesha Sai Vedantam", group:"Swati Devsoth · Shikha Tripathi",     role:"TSE",       totalCases:51,   themes: null },
-    // ── Swati Devsoth → Vidyabai Pawar ──
-    { id:"atul-tyagi",                 name:"Atul Tyagi",                 group:"Swati Devsoth · Vidyabai Pawar",        role:"Sr TSE",    totalCases:61,   themes: null },
-    { id:"durga-krishnaveni-bavanari", name:"Durga Krishnaveni Bavanari", group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:0,    themes: null },
-    { id:"gowtham-ponnana",            name:"Gowtham Ponnana",            group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:0,    themes: null },
-    { id:"harika-kotha",               name:"Harika Kotha",               group:"Swati Devsoth · Vidyabai Pawar",        role:"Sr TSE",    totalCases:96,   themes: null },
-    { id:"harika-pikkili",             name:"Harika Pikkili",             group:"Swati Devsoth · Vidyabai Pawar",        role:"Assoc TSE", totalCases:57,   themes: null },
-    { id:"kasi-jangiti",               name:"Kasi Jangiti",               group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:51,   themes: null },
-    { id:"keerthi-chandrika-pavalla",  name:"Keerthi Chandrika Pavalla",  group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:66,   themes: null },
-    { id:"monika-kunwar-shaktawat",    name:"Monika Kunwar Shaktawat",    group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:40,   themes: null },
-    { id:"pratiek-deshmukkh",          name:"Pratiek Deshmukkh",          group:"Swati Devsoth · Vidyabai Pawar",        role:"Assoc TSE", totalCases:58,   themes: null },
-    { id:"rama-sravya-upadhyayula",    name:"Rama Sravya Upadhyayula",    group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:63,   themes: null },
-    { id:"saurabh-kumar",              name:"Saurabh Kumar",              group:"Swati Devsoth · Vidyabai Pawar",        role:"Sr TSE",    totalCases:27,   themes: null },
-    { id:"shaik-afrid",                name:"Shaik Afrid",                group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:45,   themes: null },
-    { id:"srinivas-vikas-kalidindi",   name:"Srinivas Vikas Kalidindi",   group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:68,   themes: null },
-    { id:"yagya-ram-verma",            name:"Yagya Ram Verma",            group:"Swati Devsoth · Vidyabai Pawar",        role:"TSE",       totalCases:0,    themes: null },
-    // ── Swati Devsoth → Vivek Pai Baidebettu ──
-    { id:"aditya-kumar-singh",         name:"Aditya Kumar Singh",         group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:61,   themes: null },
-    { id:"ashish-shrivastav",          name:"Ashish Shrivastav",          group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:60,   themes: null },
-    { id:"ashok-kumar",                name:"Ashok Kumar",                group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:72,   themes: null },
-    { id:"bhagya-laxmi-panyam",        name:"Bhagya Laxmi Panyam",        group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"Sr TSE",    totalCases:62,   themes: null },
-    { id:"harsha-vardhan-yarlagadda",  name:"Harsha Vardhan Yarlagadda",  group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:14,   themes: null },
-    { id:"jitender-kumar",             name:"Jitender Kumar",             group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:47,   themes: null },
-    { id:"manogna-samayamantula",      name:"Manogna Samayamantula",      group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"Assoc TSE", totalCases:36,   themes: null },
-    { id:"nilesh-gosavi",              name:"Nilesh Gosavi",              group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:0,    themes: null },
-    { id:"rachana-miriyala",           name:"Rachana Miriyala",           group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:73,   themes: null },
-    { id:"rajneesh-pal",               name:"Rajneesh Pal",               group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"Assoc TSE", totalCases:42,   themes: null },
-    { id:"rushikesh-bidve",            name:"Rushikesh Bidve",            group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:32,   themes: null },
-    { id:"sagar-dixit",                name:"Sagar Dixit",                group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:77,   themes: null },
-    { id:"saitejasakesh-sadineni",     name:"Saitejasakesh Sadineni",     group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"Sr TSE",    totalCases:25,   themes: null },
-    { id:"saravan-bhetanabhotla",      name:"Saravan Bhetanabhotla",      group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:38,   themes: null },
-    { id:"sravani-damacharla",         name:"Sravani Damacharla",         group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"TSE",       totalCases:0,    themes: null },
-    { id:"vinisha-r",                  name:"Vinisha R",                  group:"Swati Devsoth · Vivek Pai Baidebettu",  role:"Assoc TSE", totalCases:86,   themes: null },
-    // ── Swati Devsoth → Suchetana CI ──
-    { id:"annanya-jha",                name:"Annanya Jha",                group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:51,   themes: null },
-    { id:"bhushan-mhala",              name:"Bhushan Mhala",              group:"Swati Devsoth · Suchetana CI",          role:"Sr TSE",    totalCases:38,   themes: null },
-    { id:"deepak-hatwar",              name:"Deepak Hatwar",              group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:48,   themes: null },
-    { id:"deepika-thakur",             name:"Deepika Thakur",             group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:0,    themes: null },
-    { id:"hrushi-anirudh-ayyagari",    name:"Hrushi Anirudh Ayyagari",    group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:67,   themes: null },
-    { id:"jahnavi-lukka",              name:"Jahnavi Lukka",              group:"Swati Devsoth · Suchetana CI",          role:"Sr TSE",    totalCases:66,   themes: null },
-    { id:"kaleemuddin-mohammed",       name:"Kaleemuddin Mohammed",       group:"Swati Devsoth · Suchetana CI",          role:"Sr TSE",    totalCases:0,    themes: null },
-    { id:"kousik-perneni",             name:"Kousik Perneni",             group:"Swati Devsoth · Suchetana CI",          role:"Assoc TSE", totalCases:43,   themes: null },
-    { id:"mansi-mandhare",             name:"Mansi Mandhare",             group:"Swati Devsoth · Suchetana CI",          role:"Assoc TSE", totalCases:105,  themes: null },
-    { id:"mastanaiah-vinnakota",       name:"Mastanaiah Vinnakota",       group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:74,   themes: null },
-    { id:"ramasubbaiah-dasari",        name:"Ramasubbaiah Dasari",        group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:68,   themes: null },
-    { id:"sai-kumar-veeramalla",       name:"Sai Kumar Veeramalla",       group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:63,   themes: null },
-    { id:"sarika-thatikonda",          name:"Sarika Thatikonda",          group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:61,   themes: null },
-    { id:"sasidhar-reddy",             name:"Sasidhar Reddy",             group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:44,   themes: null },
-    { id:"shravan-burra",              name:"Shravan Burra",              group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:50,   themes: null },
-    { id:"tejaswi-naidu-kurra",        name:"Tejaswi Naidu Kurra",        group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:55,   themes: null },
-    { id:"venkata-polisetti",          name:"Venkata Polisetti",          group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:61,   themes: null },
-    { id:"vikram-singh",               name:"Vikram Singh",               group:"Swati Devsoth · Suchetana CI",          role:"TSE",       totalCases:55,   themes: null }
-  ],
-
-  swarm: [
-    // ── Under Mathews Abraham ──
-    { id:"sushmita-srivastava",        name:"Sushmita Srivastava",        group:"Mathews Abraham · Amit Verma",        role:"SL",        totalCases:412,  themes: THEMES_SUSHMITA_POD },
-    { id:"ravi-sourav",                name:"Ravi Sourav",                group:"Mathews Abraham · Amit Verma",        role:"SL",        totalCases:null, themes: null },
-    { id:"khan-anas-rehmani",          name:"Khan Anas Rehmani",          group:"Mathews Abraham · Amit Verma",        role:"PSL",       totalCases:null, themes: null },
-    // ── Under Anurikt Wadhwa ──
-    { id:"anudeep-gopagoni",           name:"Anudeep Gopagoni",           group:"Anurikt Wadhwa · Amit Verma",         role:"PSL",       totalCases:null, themes: null },
-    { id:"amit-gaikwad",               name:"Amit Gaikwad",               group:"Anurikt Wadhwa · Amit Verma",         role:"SL",        totalCases:null, themes: null },
-    { id:"jasmeet-singh-saluja",       name:"Jasmeet Singh Saluja",       group:"Anurikt Wadhwa · Amit Verma",         role:"SL",        totalCases:null, themes: null },
-    // ── Under Mudit Mathur ──
-    { id:"amisha-sharma",              name:"Amisha Sharma",              group:"Mudit Mathur · Amit Verma",           role:"SL",        totalCases:null, themes: null },
-    { id:"devendra-gurung",            name:"Devendra Gurung",            group:"Mudit Mathur · Amit Verma",           role:"PSL",       totalCases:null, themes: null },
-    { id:"vinod-kumar-nadimpalli",     name:"Vinod Kumar Nadimpalli",     group:"Mudit Mathur · Amit Verma",           role:"SL",        totalCases:null, themes: null },
-    { id:"saloni-tiwari",              name:"Saloni Tiwari",              group:"Mudit Mathur · Amit Verma",           role:"SL",        totalCases:null, themes: null },
-    // ── Under Amit Verma (direct) ──
-    { id:"satyanarayana-polepalli",    name:"Satyanarayana Polepalli",    group:"Amit Verma (direct)",                 role:"PSL",       totalCases:null, themes: null },
-    { id:"shakti-singh",               name:"Shakti Singh",               group:"Amit Verma (direct)",                 role:"PSL",       totalCases:null, themes: null },
-    // ── Under Ajith Anand · Mukul Chandok ──
-    { id:"sravankumar-tangudu",        name:"Sravankumar Tangudu",        group:"Ajith Anand · Mukul Chandok",         role:"PSL",       totalCases:null, themes: null },
-    { id:"hari-jitray-surya-s",        name:"Hari Jitray Surya S",        group:"Ajith Anand · Mukul Chandok",         role:"PSL",       totalCases:null, themes: null },
-    { id:"issac-ananda-pal-c",         name:"Issac Ananda Pal C",         group:"Ajith Anand · Mukul Chandok",         role:"PSL",       totalCases:null, themes: null },
-    { id:"shaan-anshu",                name:"Shaan Anshu",                group:"Ajith Anand · Mukul Chandok",         role:"PSL",       totalCases:null, themes: null },
-    { id:"priya-chowdary-vemsani",     name:"Priya Chowdary Vemsani",     group:"Ajith Anand · Mukul Chandok",         role:"PSL",       totalCases:null, themes: null },
-    // ── Under Swati Devsoth · Mukul Chandok ──
-    { id:"madhu-elipe",                name:"Madhu Elipe",                group:"Swati Devsoth · Mukul Chandok",       role:"PSL",       totalCases:null, themes: null },
-    { id:"sanjeev-kumar-singh",        name:"Sanjeev Kumar Singh",        group:"Swati Devsoth · Mukul Chandok",       role:"SL",        totalCases:null, themes: null },
-    { id:"rahul-pawar",                name:"Rahul Pawar",                group:"Swati Devsoth · Mukul Chandok",       role:"SL",        totalCases:null, themes: null },
-    // ── Under Mukul Chandok (direct) ──
-    { id:"chaitanya-kumar-bansetti",   name:"Chaitanya Kumar Bansetti",   group:"Mukul Chandok (direct)",              role:"PSL",       totalCases:null, themes: null },
-    { id:"chinmayee-sahoo",            name:"Chinmayee Sahoo",            group:"Mukul Chandok (direct)",              role:"PSL",       totalCases:null, themes: null },
-    { id:"deepak-kumar-mallela",       name:"Deepak Kumar Mallela",       group:"Mukul Chandok (direct)",              role:"PSL",       totalCases:null, themes: null },
-    { id:"tushar-jain",                name:"Tushar Jain",                group:"Mukul Chandok (direct)",              role:"PSL",       totalCases:null, themes: null },
-    // ── Under Krishna DV (direct) ──
-    { id:"joao-sequeira",              name:"Joao Sequeira",              group:"Krishna DV (direct)",                 role:"PSL",       totalCases:null, themes: null },
-    { id:"patrick-coakley",            name:"Patrick Coakley",            group:"Krishna DV (direct)",                 role:"PSL",       totalCases:null, themes: null },
-    { id:"renato-quattrocchi",         name:"Renato Quattrocchi",         group:"Krishna DV (direct)",                 role:"PSL",       totalCases:null, themes: null },
-    { id:"simardeep-bindra",           name:"Simardeep Bindra",           group:"Krishna DV (direct)",                 role:"Sr PSL",    totalCases:null, themes: null }
-  ],
-
-  manager: [
-    // ── Under Amit Verma (Director) ──
-    { id:"mathews-abraham",            name:"Mathews Abraham",            group:"Amit Verma · Director",               role:"Sr Mgr",    totalCases:412,  themes: THEMES_MATHEWS_TEAM },
-    { id:"anurikt-wadhwa",             name:"Anurikt Wadhwa",             group:"Amit Verma · Director",               role:"Sr Mgr",    totalCases:null, themes: null },
-    { id:"mudit-mathur",               name:"Mudit Mathur",               group:"Amit Verma · Director",               role:"Sr Mgr",    totalCases:null, themes: null },
-    { id:"mayank-gairola",             name:"Mayank Gairola",             group:"Mathews Abraham → Amit Verma",        role:"Mgr",       totalCases:null, themes: null },
-    { id:"priyanka-mukherjee",         name:"Priyanka Mukherjee",         group:"Mathews Abraham → Amit Verma",        role:"Mgr",       totalCases:null, themes: null },
-    { id:"remya-krishnan",             name:"Remya Krishnan",             group:"Mathews Abraham → Amit Verma",        role:"Mgr",       totalCases:null, themes: null },
-    { id:"amit-daga",                  name:"Amit Daga",                  group:"Anurikt Wadhwa → Amit Verma",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"deep-sanghani",              name:"Deep Sanghani",              group:"Anurikt Wadhwa → Amit Verma",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"abhishek-massand",           name:"Abhishek Massand",           group:"Anurikt Wadhwa → Amit Verma",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"mayur-rohra",                name:"Mayur Rohra",                group:"Anurikt Wadhwa → Amit Verma",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"pushpa-devaraj",             name:"Pushpa Devaraj",             group:"Anurikt Wadhwa → Amit Verma",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"ankur-mishra",               name:"Ankur Mishra",               group:"Mudit Mathur → Amit Verma",           role:"Mgr",       totalCases:null, themes: null },
-    { id:"durfshan-wani",              name:"Durfshan Wani",              group:"Mudit Mathur → Amit Verma",           role:"Mgr",       totalCases:null, themes: null },
-    { id:"anil-maharana",              name:"Anil Maharana",              group:"Mudit Mathur → Amit Verma",           role:"Mgr",       totalCases:null, themes: null },
-    // ── Under Mukul Chandok (Director) ──
-    { id:"ajith-anand",                name:"Ajith Anand",                group:"Mukul Chandok · Director",            role:"Sr Mgr",    totalCases:null, themes: null },
-    { id:"swati-devsoth",              name:"Swati Devsoth",              group:"Mukul Chandok · Director",            role:"Sr Mgr",    totalCases:null, themes: null },
-    { id:"chandra-bhanu-shukla",       name:"Chandra Bhanu Shukla",       group:"Ajith Anand → Mukul Chandok",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"saicharan-reddy-kasireddy",  name:"Saicharan Reddy Kasireddy",  group:"Ajith Anand → Mukul Chandok",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"shyam-bihari",               name:"Shyam Bihari",               group:"Ajith Anand → Mukul Chandok",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"saikumar-alapati",           name:"Saikumar Alapati",           group:"Ajith Anand → Mukul Chandok",         role:"Mgr",       totalCases:null, themes: null },
-    { id:"harish-alla",                name:"Harish Alla",                group:"Swati Devsoth → Mukul Chandok",       role:"Mgr",       totalCases:null, themes: null },
-    { id:"shikha-tripathi",            name:"Shikha Tripathi",            group:"Swati Devsoth → Mukul Chandok",       role:"Mgr",       totalCases:null, themes: null },
-    { id:"vidyabai-pawar",             name:"Vidyabai Pawar",             group:"Swati Devsoth → Mukul Chandok",       role:"Mgr",       totalCases:null, themes: null },
-    { id:"vivek-pai-baidebettu",       name:"Vivek Pai Baidebettu",       group:"Swati Devsoth → Mukul Chandok",       role:"Mgr",       totalCases:null, themes: null },
-    { id:"suchetana-ci",               name:"Suchetana CI",               group:"Swati Devsoth → Mukul Chandok",       role:"Mgr",       totalCases:null, themes: null },
-    // ── Direct under Krishna DV ──
-    { id:"talita-de-oliveira",         name:"Talita de Oliveira",         group:"Krishna DV (direct)",                 role:"Mgr",       totalCases:null, themes: null },
-    { id:"amit-verma",                 name:"Amit Verma",                 group:"Krishna DV (direct)",                 role:"Director",  totalCases:null, themes: null },
-    { id:"mukul-chandok",              name:"Mukul Chandok",              group:"Krishna DV (direct)",                 role:"Director",  totalCases:null, themes: null }
-  ]
+var KA_MAP = {
+  "Flow / Process Builder":  {s:"partial", an:"000382004", at:"Flow not triggering on record update – common causes",        gap:"Screen Flow mobile rendering & fault path not covered; no Process Builder to Flow migration guide"},
+  "Apex & Governor Limits":  {s:"exists",  an:"000382001", at:"Resolving Apex CPU Time Limit Exceeded in Batch Jobs",         gap:"Trigger recursion and async SOQL 101 need a consolidated Apex governor limits guide"},
+  "EAC / Inbox Sync":        {s:"partial", an:"000382005", at:"EAC Activity Sync – Troubleshooting Einstein Activity Capture", gap:"Calendar sync and Salesforce Inbox integration steps not documented; VOC trend growing"},
+  "Sandbox & DevOps":        {s:"exists",  an:"000382003", at:"Sandbox Refresh Stuck in Pending – Steps to Resolve",          gap:"Custom metadata deployment errors and release critical update impact on sandbox missing"},
+  "Revenue Schedules / CPQ": {s:"missing", an:"",          at:"",                                                              gap:"No article for productRevenueSchedules qty/price behavior; Pilot Classic recalculate feature undocumented; Lightning gap = VOC"},
+  "Lightning / LWC":         {s:"partial", an:"000383497", at:"URL redirects in the Salesforce mobile app",                   gap:"@wire returning null and LWC mobile rendering issues not in existing article"},
+  "Security & Access":       {s:"missing", an:"",          at:"",                                                              gap:"No consolidated Permission Set vs Sharing Rules guide; Login IP lockout article needs refresh"},
+  "Integration & API":       {s:"exists",  an:"000386160", at:"Debug Salesforce Web Service Callouts Using SoapUI",            gap:"Named Credential OAuth token refresh and REST API timeout troubleshooting absent"},
+  "Data Management":         {s:"missing", an:"",          at:"",                                                              gap:"No article on Data Loader upsert external ID failures or Data Export scheduling; VOC candidate"},
+  "Email & Notifications":   {s:"partial", an:"000385111", at:"Too many API email invocations error – Apex",                   gap:"Email-to-Case attachment loss and sandbox deliverability bounce not documented"},
+  "Omni-Channel / Routing":  {s:"voc",     an:"",          at:"",                                                              gap:"Multiple customers reporting routing failures; strong VOC signal; no article exists"},
+  "Tableau / Analytics":     {s:"missing", an:"",          at:"",                                                              gap:"No article for Tableau Cloud refresh schedule failures; multilingual documentation also needed"},
+  "Other":                   {s:"missing", an:"",          at:"",                                                              gap:"Unclassified topics – review case subjects manually"}
 };
 
-const SOURCES = [
-  { icon:"✅", name:"OrgCS Cases", detail:"queried per person" },
-  { icon:"⚠️", name:"OrgCS KnowledgeArticleVersion", detail:"estimated coverage" },
-  { icon:"❌", name:"Org62", detail:"unavailable" },
-  { icon:"❌", name:"Confluence", detail:"unavailable" },
-  { icon:"❌", name:"GUS", detail:"unavailable" }
-];
-
-// ── App state ──────────────────────────────────────────────────────────────────
-let currentScope = "engineer";
-let currentPersonId = "harika-koneti";
-let minCases = 1;
-
-const state = {
-  coverage: new Set(["partial", "gap"]),
-  types: new Set(["ka", "voc"]),
-  topics: new Set()
-};
-
-function activePerson() {
-  return SCOPE_PEOPLE[currentScope].find(p => p.id === currentPersonId) || SCOPE_PEOPLE[currentScope][0];
-}
-
-// ── Scope & person switching ───────────────────────────────────────────────────
-function setScope(key) {
-  currentScope = key;
-  document.querySelectorAll(".scope-pill").forEach((btn, i) => {
-    btn.classList.toggle("active", ["engineer","swarm","manager"][i] === key);
-  });
-  const labels = { engineer: "Engineer", swarm: "Swarm Lead", manager: "Manager" };
-  document.getElementById("person-list-label").textContent = labels[key];
-
-  const people = SCOPE_PEOPLE[key];
-  currentPersonId = people[0].id;
-  document.getElementById("person-search").value = "";
-  rebuildPersonList();
-  onPersonChange();
-}
-
-function setPerson(id) {
-  currentPersonId = id;
-  document.querySelectorAll(".person-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.id === id);
-  });
-  onPersonChange();
-}
-
-function onPersonChange() {
-  const person = activePerson();
-  updateHeader(person);
-  if (person.themes && person.themes.length > 0) {
-    state.topics = new Set(person.themes.map(t => t.id));
-    const maxCases = Math.max(...person.themes.map(t => t.caseCount));
-    const slider = document.getElementById("f-min-cases");
-    slider.max = maxCases;
-    if (parseInt(slider.value) > maxCases) { slider.value = 1; minCases = 1; document.getElementById("min-cases-val").textContent = "1"; }
-  } else {
-    state.topics = new Set();
-  }
-  rebuildTopicFilters();
-  render();
-}
-
-function updateHeader(person) {
-  const scopeLabels = { engineer: "Engineer", swarm: "Swarm Lead", manager: "Manager" };
-  document.getElementById("header-title").textContent = "Knowledge Gap Analysis — " + person.name;
-  document.getElementById("header-subtitle").textContent =
-    scopeLabels[currentScope] + " · " + person.group + " · Krishna DV Org · 2026-06-22";
-  const firstNameLabel = person.name.split(" ")[0];
-  document.getElementById("col-created-header").textContent = "Created (" + firstNameLabel + ")";
-  document.getElementById("lbl-ka").textContent = "KAs (" + firstNameLabel + ")";
-  document.getElementById("lbl-voc").textContent = "VOCs (" + firstNameLabel + ")";
-}
-
-function onMinCases(v) {
-  minCases = parseInt(v, 10);
-  document.getElementById("min-cases-val").textContent = v;
-  render();
-}
-
-function toggleSet(set, key, checked) {
-  checked ? set.add(key) : set.delete(key);
-  render();
-}
-
-// ── DOM helpers ────────────────────────────────────────────────────────────────
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
-function makeTag(cls, text) { return el("span", "tag " + cls, text); }
-
-function makeCopyBtn(titleText) {
-  const btn = el("button", "copy-btn", "Copy");
-  btn.addEventListener("click", function() {
-    navigator.clipboard.writeText(titleText).then(() => {
-      btn.textContent = "Copied!"; btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
-    });
-  });
-  return btn;
-}
-
-function makeTitleBlock(labelText, labelColor, titleText) {
-  const block = el("div", "title-block");
-  const lbl = el("div", "title-label", labelText);
-  lbl.style.color = labelColor;
-  block.appendChild(lbl);
-  const row = el("div", "title-row");
-  row.appendChild(el("div", "title-text", titleText));
-  row.appendChild(makeCopyBtn(titleText));
-  block.appendChild(row);
-  return block;
-}
-
-function makeCreatedCell(created) {
-  const cell = el("div", "created-cell");
-  const kaItem = el("div", "created-item");
-  kaItem.appendChild(el("span", "created-count " + (created.ka > 0 ? "has-count" : "zero"), String(created.ka)));
-  kaItem.appendChild(makeTag("tag-ka", "📄 KA"));
-  cell.appendChild(kaItem);
-  const vocItem = el("div", "created-item");
-  vocItem.appendChild(el("span", "created-count " + (created.voc > 0 ? "has-count" : "zero"), String(created.voc)));
-  vocItem.appendChild(makeTag("tag-voc", "🗣️ VOC"));
-  cell.appendChild(vocItem);
-  return cell;
-}
-
-// ── Render ─────────────────────────────────────────────────────────────────────
-function matches(theme) {
-  if (theme.caseCount < minCases) return false;
-  if (!state.coverage.has(theme.coverage)) return false;
-  if (!state.topics.has(theme.id)) return false;
-  if (theme.recommended.length > 0) {
-    if (!theme.recommended.some(r => state.types.has(r))) return false;
-  } else {
-    if (!state.coverage.has("covered")) return false;
-  }
-  return true;
-}
-
-function render() {
-  const person = activePerson();
-  const noDataEl = document.getElementById("no-data-state");
-  const tableEl = document.getElementById("main-table");
-  const prioritySection = document.getElementById("priority-section");
-  const toolbar = document.querySelector(".toolbar");
-
-  if (!person.themes || person.themes.length === 0) {
-    noDataEl.style.display = "block";
-    tableEl.style.display = "none";
-    prioritySection.style.display = "none";
-    document.getElementById("nd-title").textContent = "No data collected yet for " + person.name;
-    document.getElementById("result-count").textContent = "No case data available";
-    document.getElementById("stat-cases").textContent = "—";
-    document.getElementById("stat-themes").textContent = "—";
-    document.getElementById("stat-gaps").textContent = "—";
-    document.getElementById("stat-created-ka").textContent = "—";
-    document.getElementById("stat-created-voc").textContent = "—";
-    return;
-  }
-
-  noDataEl.style.display = "none";
-  tableEl.style.display = "table";
-
-  const visible = person.themes.filter(matches);
-  const tbody = document.getElementById("table-body");
-  const emptyState = document.getElementById("empty-state");
-
-  while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
-
-  if (visible.length === 0) {
-    emptyState.style.display = "block";
-    prioritySection.style.display = "none";
-  } else {
-    emptyState.style.display = "none";
-    prioritySection.style.display = "block";
-    visible.forEach(theme => {
-      const tr = document.createElement("tr");
-
-      const tdName = el("td");
-      tdName.appendChild(el("div", "theme-name", theme.name));
-      tr.appendChild(tdName);
-
-      const tdCount = el("td");
-      tdCount.appendChild(el("span", "case-count-badge", String(theme.caseCount)));
-      tr.appendChild(tdCount);
-
-      const tdCov = el("td");
-      const covMap = { covered:["tag-covered","✅ Covered"], partial:["tag-partial","⚠️ Partial"], gap:["tag-gap","❌ Gap"] };
-      tdCov.appendChild(makeTag(covMap[theme.coverage][0], covMap[theme.coverage][1]));
-      tr.appendChild(tdCov);
-
-      const tdRec = el("td");
-      if (theme.recommended.length === 0) {
-        const none = el("span","","—"); none.style.color="#484f58"; none.style.fontSize="11px";
-        tdRec.appendChild(none);
-      } else {
-        const wrap = el("div","tags-cell");
-        if (theme.recommended.includes("ka")) wrap.appendChild(makeTag("tag-ka","📄 KA"));
-        if (theme.recommended.includes("voc")) wrap.appendChild(makeTag("tag-voc","🗣️ VOC"));
-        tdRec.appendChild(wrap);
-      }
-      tr.appendChild(tdRec);
-
-      const tdCreated = el("td");
-      tdCreated.appendChild(makeCreatedCell(theme.created));
-      tr.appendChild(tdCreated);
-
-      const tdTitle = el("td");
-      if (theme.kaTitle && state.types.has("ka")) tdTitle.appendChild(makeTitleBlock("📄 KA", "#6e7681", theme.kaTitle));
-      if (theme.vocTitle && state.types.has("voc")) tdTitle.appendChild(makeTitleBlock("🗣️ VOC", "#b088f7", theme.vocTitle));
-      if (tdTitle.childElementCount === 0) { const dash = el("span","","—"); dash.style.color="#484f58"; tdTitle.appendChild(dash); }
-      tr.appendChild(tdTitle);
-
-      tbody.appendChild(tr);
-    });
-  }
-
-  const totalKA  = visible.reduce((s,t) => s + t.created.ka, 0);
-  const totalVOC = visible.reduce((s,t) => s + t.created.voc, 0);
-  document.getElementById("result-count").textContent = "Showing " + visible.length + " of " + person.themes.length + " themes";
-  document.getElementById("stat-cases").textContent = person.totalCases;
-  document.getElementById("stat-themes").textContent = visible.length;
-  document.getElementById("stat-gaps").textContent = visible.filter(t => t.coverage === "gap" || t.coverage === "partial").length;
-  document.getElementById("stat-created-ka").textContent = totalKA;
-  document.getElementById("stat-created-voc").textContent = totalVOC;
-
-  renderPriorityCards(person.themes);
-}
-
-function renderPriorityCards(themes) {
-  const top3 = themes.filter(t => t.priorityRank > 0).sort((a,b) => a.priorityRank - b.priorityRank).slice(0,3);
-  const container = document.getElementById("priority-cards");
-  while (container.firstChild) container.removeChild(container.firstChild);
-  top3.forEach((t, i) => {
-    const card = el("div","priority-card rank-" + (i+1));
-    card.appendChild(el("div","rank-label","#" + (i+1) + " Priority"));
-    card.appendChild(el("div","p-topic", t.name));
-    card.appendChild(el("div","p-reason", t.priorityReason));
-    const recRow = el("div","rec-tags");
-    if (t.recommended.includes("ka")) recRow.appendChild(makeTag("tag-ka","📄 KA"));
-    if (t.recommended.includes("voc")) recRow.appendChild(makeTag("tag-voc","🗣️ VOC"));
-    card.appendChild(recRow);
-    container.appendChild(card);
-  });
-}
-
-function renderSources() {
-  const row = document.getElementById("sources-row");
-  row.appendChild(el("div","source-lbl","Sources Checked"));
-  SOURCES.forEach(s => {
-    const item = el("div","source-item");
-    item.appendChild(document.createTextNode(s.icon + " "));
-    item.appendChild(el("span","s-name", s.name));
-    item.appendChild(document.createTextNode(" — " + s.detail));
-    row.appendChild(item);
-  });
-}
-
-function buildStaticFilters() {
-  const covData = [
-    { key:"covered", cls:"tag-covered", label:"✅ Covered", on:false },
-    { key:"partial",  cls:"tag-partial",  label:"⚠️ Partial",  on:true },
-    { key:"gap",      cls:"tag-gap",      label:"❌ Gap",      on:true }
-  ];
-  const covC = document.getElementById("coverage-filters");
-  covData.forEach(c => {
-    const lbl = document.createElement("label");
-    const cb = document.createElement("input"); cb.type="checkbox"; cb.checked=c.on;
-    cb.addEventListener("change", () => toggleSet(state.coverage, c.key, cb.checked));
-    lbl.appendChild(cb); lbl.appendChild(document.createTextNode(" ")); lbl.appendChild(makeTag(c.cls, c.label));
-    covC.appendChild(lbl);
-  });
-
-  const typeData = [
-    { key:"ka",  label:"📄 KA (Knowledge Article)" },
-    { key:"voc", label:"🗣️ VOC (Voice of Customer)" }
-  ];
-  const typeC = document.getElementById("type-filters");
-  typeData.forEach(t => {
-    const lbl = document.createElement("label");
-    const cb = document.createElement("input"); cb.type="checkbox"; cb.checked=true;
-    cb.addEventListener("change", () => toggleSet(state.types, t.key, cb.checked));
-    lbl.appendChild(cb); lbl.appendChild(document.createTextNode(" " + t.label));
-    typeC.appendChild(lbl);
-  });
-}
-
-function rebuildPersonList(filter) {
-  const people = SCOPE_PEOPLE[currentScope];
-  const container = document.getElementById("person-list");
-  while (container.firstChild) container.removeChild(container.firstChild);
-
-  const q = (filter || "").toLowerCase().trim();
-  let lastGroup = null;
-  people.forEach(p => {
-    if (q && !p.name.toLowerCase().includes(q)) return;
-    if (p.group !== lastGroup) {
-      if (!q) container.appendChild(el("div", "group-label", p.group));
-      lastGroup = p.group;
+// ============================================================
+// HELPERS
+// ============================================================
+function getTopic(subj) {
+  var s = subj.toLowerCase();
+  for (var i = 0; i < TOPIC_RULES.length; i++) {
+    for (var j = 0; j < TOPIC_RULES[i].kw.length; j++) {
+      if (s.indexOf(TOPIC_RULES[i].kw[j]) !== -1) return TOPIC_RULES[i].t;
     }
-    const btn = document.createElement("button");
-    btn.className = "person-btn" + (p.id === currentPersonId ? " active" : "") + (p.themes ? " has-data" : "");
-    btn.dataset.id = p.id;
-    btn.addEventListener("click", () => setPerson(p.id));
+  }
+  return "Other";
+}
 
-    const dot = el("span","p-dot");
-    btn.appendChild(dot);
+function roleClass(title) {
+  var t = (title || '').toLowerCase();
+  if (t.indexOf('director') !== -1)                                  return 'rd';
+  if (t.indexOf('sr manager') !== -1 || t.indexOf('senior manager') !== -1) return 'rsm';
+  if (t.indexOf('manager') !== -1)                                   return 'rm';
+  if (t.indexOf('swarm') !== -1)                                     return 'rs';
+  return 're';
+}
 
-    const name = el("span","p-name", p.name);
-    btn.appendChild(name);
+function shortRole(title) {
+  var t = (title || '').toLowerCase();
+  if (t.indexOf('senior director') !== -1)  return 'Sr Director';
+  if (t.indexOf('director') !== -1)         return 'Director';
+  if (t.indexOf('sr manager') !== -1 || t.indexOf('senior manager') !== -1) return 'Sr Manager';
+  if (t.indexOf('manager') !== -1)          return 'Manager';
+  if (t.indexOf('senior principal swarm') !== -1) return 'Sr Principal SL';
+  if (t.indexOf('principal swarm') !== -1)  return 'Principal SL';
+  if (t.indexOf('swarm') !== -1)            return 'Swarm Lead';
+  if (t.indexOf('principal technical') !== -1) return 'Principal TSE';
+  if (t.indexOf('senior technical') !== -1)    return 'Sr TSE';
+  if (t.indexOf('associate') !== -1)           return 'Assoc TSE';
+  return 'TSE';
+}
 
-    const badge = el("span","p-badge", p.role);
-    btn.appendChild(badge);
+function mkBadge(text, cls) {
+  var s = document.createElement('span');
+  s.className = 'badge ' + cls;
+  s.textContent = text;
+  return s;
+}
 
-    container.appendChild(btn);
+function mkPill(text) {
+  var s = document.createElement('span');
+  s.className = 'pill';
+  s.textContent = text;
+  return s;
+}
+
+function recBadge(status) {
+  if (status === 'missing') return mkBadge('Draft KA Needed', 'b-miss');
+  if (status === 'voc')     return mkBadge('VOC Opportunity',  'b-voc');
+  if (status === 'partial') return mkBadge('Needs Update',     'b-upd');
+  return mkBadge('Article Exists', 'b-ok');
+}
+
+// ============================================================
+// TREE INDEX
+// ============================================================
+var byId = {}, children = {};
+PEOPLE.forEach(function(p) {
+  byId[p.id] = p;
+  children[p.id] = children[p.id] || [];
+  if (p.mid) {
+    children[p.mid] = children[p.mid] || [];
+    children[p.mid].push(p.id);
+  }
+});
+
+function descendants(id) {
+  var out = [id];
+  (children[id] || []).forEach(function(c) { out = out.concat(descendants(c)); });
+  return out;
+}
+
+function descNames(id) {
+  return descendants(id).map(function(i) { return byId[i] ? byId[i].name : ''; }).filter(Boolean);
+}
+
+// ============================================================
+// POPULATE FILTER DROPDOWNS
+// ============================================================
+(function() {
+  var topics = TOPIC_RULES.map(function(r) { return r.t; }).concat(['Other']);
+  var tSel = document.getElementById('fTopic');
+  topics.forEach(function(t) {
+    var o = document.createElement('option'); o.value = t; o.textContent = t; tSel.appendChild(o);
   });
-}
 
-function filterPersonList(val) {
-  rebuildPersonList(val);
-}
-
-function rebuildTopicFilters() {
-  const person = activePerson();
-  const container = document.getElementById("topic-filters");
-  while (container.firstChild) container.removeChild(container.firstChild);
-  if (!person.themes) return;
-  person.themes.forEach(theme => {
-    const lbl = document.createElement("label");
-    const cb = document.createElement("input"); cb.type="checkbox"; cb.checked=true;
-    cb.addEventListener("change", () => toggleSet(state.topics, theme.id, cb.checked));
-    lbl.appendChild(cb);
-    lbl.appendChild(document.createTextNode(" " + theme.name + " "));
-    const badge = el("span","case-count-badge", String(theme.caseCount));
-    badge.style.marginLeft = "auto";
-    lbl.appendChild(badge);
-    container.appendChild(lbl);
+  var pods = [];
+  PEOPLE.forEach(function(p) { if (pods.indexOf(p.pod) === -1) pods.push(p.pod); });
+  pods.sort();
+  var pSel = document.getElementById('fPod');
+  pods.forEach(function(pod) {
+    var o = document.createElement('option'); o.value = pod; o.textContent = pod; pSel.appendChild(o);
   });
-}
 
-function exportCSV() {
-  const person = activePerson();
-  if (!person.themes) return;
-  const visible = person.themes.filter(matches);
-  const rows = [["Person","Scope","Topic","Cases","Coverage","Recommended","KA Created","VOC Created","KA Title","VOC Title"]];
-  visible.forEach(t => rows.push([
-    person.name, currentScope, t.name, t.caseCount, t.coverage,
-    t.recommended.join("+"), t.created.ka, t.created.voc, t.kaTitle, t.vocTitle
-  ]));
-  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\n");
-  const a = document.createElement("a");
-  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-  a.download = "knowledge-gap-" + person.id + ".csv";
-  a.click();
-}
-
-// ── Live case counts (Salesforce REST API) ─────────────────────────────────────
-// Maps person id → Salesforce User Id (collected from OrgCS queries)
-const SF_USER_IDS = {
-  // Mayank Gairola · Sushmita Srivastava
-  "harika-koneti":             "005Hx000001NgKXIA0",
-  "giripranesh-murali":        "005Hx000000VhyLIAS",
-  "pallavi-keshavrao-gawande": "005Hx000003gGOPIA2",
-  "charan-kumar-suguri":       "005Hx0000014At3IAE",
-  "balachandra-maha-samudam":  "005Hx000003BBJNIA4",
-  "deepthy-john":              "005Hx000003egZtIAI",
-  "priya-dharshini-m":         "005Hx000003g3kXIAQ",
-  "alamelu-arumugam":          "005Hx000004wdebIAA",
-  "hariharan-m":               "005Hx000005CVmjIAG",
-  "subhasweta-behera":         "005Hx000008JxJ7IAK",
-  "satakshi-banik":            "005Hx00000A7gMXIAZ",
-  "srishti-suman":             "005Hx00000AEiRdIAL",
-  // Priyanka Mukherjee
-  "himanshu-kumar-sinha":      "005Hx000000VlaXIAS",
-  "ayush-sasspal":             "005Hx000001XPQTIA4",
-  "swati-gupta":               "005Hx000001xbcTIAQ",
-  "vijay-kumar-uc":            "005Hx0000027bcnIAA",
-  "akrity-kumari":             "005Hx000002LWGfIAO",
-  "granthana-g":               "005Hx000003ejG1IAI",
-  "anju-udayakumar":           "005Hx000003fHWDIA2",
-  "neha-upwanshi":             "005Hx000005Vkq5IAC",
-  "sonali-suriyanarayanan":    "005Hx000008E06nIAC",
-  "ashish-vyas":               "005Hx000009LQojIAG",
-  "aditya-kulkarni":           "005Hx00000AKVt8IAH",
-  "pankaj-kumar-dasgupta":     "005Hx00000AVNiXIAX",
-  // Remya Krishnan
-  "paras-ahuja":               "005Hx000003BAvCIAW",
-  "anu-varghese":              "005Hx000003fCUvIAM",
-  "priyadarshini-sr":          "005Hx000003gHFdIAM",
-  "amith-tg":                  "005Hx0000048JCrIAM",
-  "seema-bidare":              "005Hx000005CJ7FIAW",
-  "sunil-dalawai":             "005Hx000005CVBdIAO",
-  "kotte-amruta-lakshmi":      "005Hx000005DqSXIA0",
-  "sangeetha-y":               "005Hx0000099AsbIAE",
-  "keerthi-vissamsetty":       "005Hx0000099Cw1IAE",
-  "yathish-v":                 "005Hx000009FlO1IAK",
-  "bhavani-konderu":           "005Hx000009IpGcIAK",
-  // Talita de Oliveira
-  "ainara-hermoso":            "005Hx00000GQksPIAT",
-  "alessandro-zito":           "005Hx000009xDP3IAM",
-  "augustina-vornehm":         "005Hx00000Gd0rmIAB",
-  "chiamaka-offoaro-nasri":    "005Hx000005x6wJIAQ",
-  "clement-boissonnade":       "005Hx000006IkNVIA0",
-  "enrico-dustin-hoffmann":    "005Hx000005BQ2jIAG",
-  "jamie-de-jongh":            "005Hx000006lmTyIAI",
-  "juan-carlos-cordovez":      "005Hx00000AoHBBIA3",
-  "leona-wolff":               "005Hx000005PaF7IAK",
-  "luigi-toto":                "005Hx000006Ik90IAC",
-  "maria-schalk":              "005Hx000007VJS9IAO",
-  "marie-rose-schmoetten":     "005Hx000008fsO2IAI",
-  "oliver-dovgvillo":          "005Hx0000078TKAIA2",
-  "raphael-herve":             "005Hx00000FwkppIAB",
-  "rebecca-oberto":            "005Hx00000FwkcvIAB",
-  "sofia-horvath":             "0053y00000GnsTIAAZ",
-  // Anurikt Wadhwa · Amit Daga
-  "akshay-srivastava":         "005Hx000006TcGAIA0",
-  "aman-lalwani":              "005Hx000005CIW9IAO",
-  "ayeshea-lyngdoh":           "005Hx0000089Z3ZIAU",
-  "kritagya-sharma":           "005Hx000002CBwDIAW",
-  "madhu-babu-krovvidi":       "005Hx000003ElDRIA0",
-  "manasa-madam":              "005Hx000001s75aIAA",
-  "neha-ghumbare":             "005Hx000005lRujIAE",
-  "nishat-shaikh":             "0053y00000GQHaLAAX",
-  "pranav-tatikonda":          "005Hx000008F4RhIAK",
-  "ramani-bamane":             "005Hx000000HxzlIAC",
-  "sai-anish-sidhireddy":      "005Hx000006giijIAA",
-  "shivam-sharma":             "005Hx000006JvK8IAK",
-  "sourabh-more":              "005Hx000005LoBpIAK",
-  "sparshi-agrawal":           "005Hx000006blCbIAI",
-  "supriya-vunnava":           "005Hx000003QgLFIA0",
-  // Anurikt Wadhwa · Deep Sanghani
-  "aishwarya-murmu":           "005Hx000002zgXRIAY",
-  "arsha-sharma":              "005Hx000008H5gEIAS",
-  "ashutosh-hore":             "005Hx000008F5cHIAS",
-  "divya-raghavan":            "005Hx000003gEw5IAE",
-  "durgasi-santhosh-kumar":    "005Hx000003RqTpIAK",
-  "gaurav-jaiswal":            "0053y00000GL7nSAAT",
-  "jaipal-reddy-patlolla":     "005Hx000005OmmzIAC",
-  "kunal-shelar":              "0053y00000GL7knAAD",
-  "naincy-kamthan":            "005Hx000005wDHjIAM",
-  "naren-penmetsa":            "005Hx000003RtRhIAK",
-  "poonam-jadhav":             "0053y00000GnfJiAAJ",
-  "ramakrishna-putta":         "005Hx000001XdbVIAS",
-  "rohan-kamble":              "0053y00000GL7vWAAT",
-  "sruti-aich":                "005Hx000008BGRRIA4",
-  "venkat-reddy-marivina":     "005Hx000005WfunIAC",
-  // Anurikt Wadhwa · Mayur Rohra
-  "aditya-mishra":             "0053y00000GL7lrAAD",
-  "ashitha-srungavarapu":      "005Hx000006BmgzIAC",
-  "bhaskar-choubey":           "0053y00000GL7gtAAD",
-  "mohammad-tazeem-khan":      "005Hx000008GsO1IAK",
-  "naga-krishnaveni-achanta":  "005Hx000004HXZxIAO",
-  "pooja-borkar":              "005Hx000004T2wzIAC",
-  "prabhu-teja-yellamelli":    "005Hx000005aFQfIAM",
-  "priyanka-polam":            "005Hx000005xDufIAE",
-  "ruchika-gupta":             "005Hx000006ZToTIAW",
-  "sanskruti-hembade":         "005Hx000006boFJIAY",
-  "shaik-rajiya-begum":        "005Hx0000071dg2IAA",
-  "surepally-sai-chand":       "005Hx000002LXCjIAO",
-  "tanuj-arora":               "005Hx000009SgqLIAS",
-  "yaswant-bommi":             "005Hx000005F0hZIAS",
-  // Anurikt Wadhwa · Pushpa Devaraj
-  "akhila-bodi":               "005Hx000006WCLxIAO",
-  "bhavana-paparapatti":       "005Hx0000089YKPIA2",
-  "jagadish-chithrala":        "005Hx000006ND5xIAG",
-  "krithika-reddy-k":          "005Hx000009r0zBIAQ",
-  "likhilswamy-thota":         "005Hx000006VjwgIAC",
-  "md-athar":                  "005Hx000005x4q6IAA",
-  "mohammad-yusuf-idrisi":     "005Hx000005ISSnIAO",
-  "pramodh-korivi":            "005Hx000008Lc5hIAC",
-  "prashanti-chavali":         "005Hx000001NgPNIA0",
-  "shajidha-shaik":            "005Hx0000013p5RIAQ",
-  "shashwat-vairale":          "005Hx000006UH4oIAG",
-  "sri-nagalaxmi-anika":       "005Hx000001sFhSIAU",
-  "surya-prakash-sakthivel":   "005Hx000009kwtRIAQ",
-  "syeda-saba-siddiqua":       "005Hx000006oF8TIAU",
-  // Mudit Mathur · Ankur Mishra
-  "abhishek-rajput":           "005Hx000006QaCTIA0",
-  "anshit-bhargava":           "005Hx000003QgOTIA0",
-  "anupkumar-ankalwar":        "005Hx000002z5MbIAI",
-  "mamatha-panjala":           "005Hx000001eNJtIAM",
-  "nidhi-sheet":               "0053y00000G23tDAAR",
-  "noopur-kawale":             "005Hx000002LXB7IAO",
-  "pradyumn-sharma":           "005Hx000004sue1IAA",
-  "rachitha-donkeshwaram":     "005Hx000006YiRNIA0",
-  "rakesh-gulivindala":        "005Hx000005UZezIAG",
-  "sachin-kumar-naidi":        "005Hx000003zvpFIAQ",
-  "sai-charith-nagubandi":     "005Hx000003QrF3IAK",
-  "saksham-shah":              "005Hx000004876rIAA",
-  "sanket-kine":               "005Hx000006ZMjlIAG",
-  "sneha-gupta":               "005Hx000006TxfaIAC",
-  "suman-kumar-pramanik":      "005Hx000006QcEHIA0",
-  // Mudit Mathur · Anil Maharana
-  "abdul-muqeeth-mohammed":    "005Hx00000309b3IAA",
-  "akhila-kaparthi":           "005Hx000008I5awIAC",
-  "ayushi-ghosh":              "005Hx000006fhITIAY",
-  "dev-priya-pandey":          "005Hx000008BDlKIAW",
-  "ganesh-ramavath":           "005Hx000006kIBNIA2",
-  "harika-mopada":             "005Hx000001L0m2IAC",
-  "haritha-rachuri":           "005Hx000001XZWHIA4",
-  "pranay-kumar":              "005Hx0000013UiXIAU",
-  "rakshith-kadari":           "005Hx000009D4NBIA0",
-  "sahithi-gayam":             "005Hx000002FLarIAG",
-  "shivam-mishra":             "005Hx000002GPcPIAW",
-  "suryateja-birudukota":      "005Hx000001csgLIAQ",
-  "sushma-bhavani-lagisetty":  "005Hx000002GPNtIAO",
-  "tejaswinee-khot":           "005Hx000003gGRdIAM",
-  "yadhu-nandan-karumanchi":   "005Hx0000040rYHIAY",
-  // Mudit Mathur · Durfshan Wani
-  "anant-kumar":               "0053y00000GR1rkAAD",
-  "ansuman-kar":               "005Hx000002CM0PIAW",
-  "ayushi-parmar":             "005Hx000001Ngh7IAC",
-  "harshad-bogawat":           "005Hx000004HUygIAG",
-  "lakshman-katuri":           "005Hx000006DvEjIAK",
-  "mukesh-sai-varma-mudunuri": "005Hx000003BB01IAG",
-  "naga-ajay-kumar-dp":        "005Hx0000089YDxIAM",
-  "priya-ranjan":              "0053y00000GL7qNAAT",
-  "raamdivya-b":               "0053y00000GL7ulAAD",
-  "sai-shashank-banala":       "005Hx000005aFP3IAM",
-  "sanjay-ravi-borkar":        "0053y00000GL7zWAAT",
-  "soumitra-sabnis":           "0053y00000GnsTLAAZ",
-  "sravan-kumar-kathala":      "005Hx000005DBArIAO",
-  "sushma-ediga":              "005Hx000006gk6DIAQ",
-  "yojana-gajavelli":          "005Hx000001L4HlIAK",
-  // Ajith Anand · Chandra Bhanu Shukla
-  "abhinav-kumar-sig":         "0053y00000GRbs0AAD",
-  "aksh-kadia":                "005Hx0000040rbVIAQ",
-  "anindita-hazra":            "005Hx000000EBjcIAG",
-  "darshan-ra":                "005Hx000005W1J3IAK",
-  "muthubalaji-karuppasamy":   "005Hx000005VDR7IAO",
-  "nagaveni-kambar":           "0053y00000GR0KaAAL",
-  "nayana":                    "005Hx00000554g1IAA",
-  "nirmala-botchu":            "005Hx000001yAqLIAU",
-  "ranjitha-km":               "005Hx000003gI0PIAU",
-  "ranju-rajan":               "0053y00000GL7cyAAD",
-  "s-chetan-kumar":            "005Hx000006dDjVIAU",
-  "sanghamitra-rajkhowa":      "005Hx000003fLErIAM",
-  "shreya-chatterjee":         "005Hx000001cgwvIAA",
-  "yogesh-sundararaman":       "005Hx000001hXMkIAM",
-  // Ajith Anand · Saicharan Reddy Kasireddy
-  "abhinav-singh":             "005Hx000001y5aXIAQ",
-  "aziz-sheikh":               "005Hx0000027ZmHIAU",
-  "chaitanya-sable":           "005Hx000006JKHJIA4",
-  "himanshu-shekhar":          "0053y00000GRodHAAT",
-  "kishore-goud":              "0053y00000GrXAgAAN",
-  "mahender-bachali":          "005Hx0000011KYoIAM",
-  "mandar-joshi":              "005Hx000001JUjOIAW",
-  "manisha-saini":             "005Hx000001v0kHIAQ",
-  "nikhil-khandelwal":         "005Hx000005wzoDIAQ",
-  "pooja-bante":               "005Hx0000013pVFIAY",
-  "ravali-bobba":              "005Hx0000024TThIAM",
-  "sai-saraschandra-gudipati": "0053y00000GsCTPAA3",
-  "sai-sri-ganapathineedi":    "0053y00000GRgZhAAL",
-  "sameem-sarkar":             "005Hx000001L4zJIAS",
-  "sasidhar-kanuganti":        "005Hx000005VDSjIAO",
-  "siva-dornala":              "005Hx000002GPanIAG",
-  "subhadip-chatterjee":       "005Hx000005RBMHIA4",
-  "sumasree-madichedu":        "005Hx000005OVXdIAO",
-  // Ajith Anand · Shyam Bihari
-  "muni-venkata-rajesh-g":     "005Hx000006UPS9IAO",
-  // Ajith Anand · Saikumar Alapati
-  "akash-kumar":               "005Hx0000059ZDNIA2",
-  "ankita-thakur":             "0053y00000GR0IKAA1",
-  "isha-gupta":                "0053y00000GL7qSAAT",
-  "jyoti-kumari":              "0053y00000GnsRPAAZ",
-  "manchireddy-ananthalaxmi":  "005Hx000003RpXlIAK",
-  "nikita-vernekar":           "005Hx000005DB7dIAG",
-  "pooja-r":                   "005Hx000005CH74IAG",
-  "pratik-babar":              "005Hx000000I6erIAC",
-  "ravi-ritesh-kumar":         "005Hx0000006hDZIAY",
-  "sachin-bhakare":            "005Hx000004UJyzIAG",
-  "saikiran-enugurthi":        "005Hx000000VlVhIAK",
-  "sakshi-nigam":              "0053y00000GnsRXAAZ",
-  "shaik-rafi":                "005Hx000005ISUPIA4",
-  "shyamal-kumar":             "005Hx000005wFkfIAE",
-  "sreekantha-reddy-k":        "005Hx0000018MVpIAM",
-  // Swati Devsoth · Harish Alla
-  "abdul-rahman":              "005Hx000006LUhBIAW",
-  "abhishek-b":                "005Hx000006XgppIAC",
-  "akuthota-rasagna":          "005Hx000006ZN9ZIAW",
-  "architha-s":                "005Hx000009Hz58IAC",
-  "ashwini-dubey":             "005Hx000000EC32IAG",
-  "atul-pawar":                "005Hx000000IG1VIAW",
-  "avirup-dasgupta":           "005Hx000006M24XIAS",
-  "bhagya-varshitha-pasunuri": "005Hx000002GY2zIAG",
-  "chandu-nagulamilli":        "005Hx000005HYwrIAG",
-  "guddu-kumar":               "005Hx000006VOkAIAW",
-  "lavanya-kumari-marri":      "005Hx000003U58bIAC",
-  "rehan-khan":                "005Hx000005DqM5IAK",
-  "sai-praveen-kakkirala":     "0053y00000GLfyqAAD",
-  "sai-suresh":                "005Hx000001G4n3IAC",
-  "vaitheeshwari-e":           "005Hx000006WBw9IAG",
-  "vidya-patil":               "005Hx000008lwS9IAI",
-  // Swati Devsoth · Shikha Tripathi
-  "akash-makker":              "005Hx000005wozhIAA",
-  "ashwin-ganorkar":           "005Hx000005OY2TIAW",
-  "hardik-saxena":             "005Hx000006M22vIAC",
-  "harshith-pasumarthi":       "0053y00000GsX5KAAV",
-  "hiranmayai-nemani":         "005Hx0000089VnyIAE",
-  "karan-bilakhiya":           "005Hx000004QS1ZIAW",
-  "krishna-chaitanya-naraharisetti": "005Hx000005nN73IAE",
-  "lakshmi-reddy-mula":        "005Hx000006ZSdtIAG",
-  "lily-mishra":               "005Hx000001NiCfIAK",
-  "manasa-devi-velugula":      "005Hx000004svyHIAQ",
-  "nagarjuna-guraja":          "005Hx000005E6dlIAC",
-  "pratik-jadhav":             "0053y00000GL7vRAAT",
-  "priya-kushwah":             "005Hx000002GR9aIAG",
-  "raj-kumar-akoju":           "005Hx000003Pa09IAC",
-  "sai-kumar-raju-muddaluri":  "005Hx000002MLSrIAO",
-  "shivam-singh2":             "005Hx000006YP29IAG",
-  "uma-datta-vedantam":        "005Hx000009D60oIAC",
-  // Swati Devsoth · Vidyabai Pawar
-  "atul-tyagi":                "005Hx000002mjHpIAI",
-  "durga-krishnaveni-bavanari":"005Hx000003QeEcIAK",
-  "gowtham-ponnana":           "005Hx00000ABiw1IAD",
-  "harika-kotha":              "005Hx000003gOozIAE",
-  "harika-pikkili":            "005Hx000003nFDtIAM",
-  "kasi-jangiti":              "005Hx000008UrblIAC",
-  "keerthi-chandrika-pavalla": "005Hx000002GPVxIAO",
-  "monika-kunwar-shaktawat":   "005Hx000005JFuvIAG",
-  "pratiek-deshmukkh":         "005Hx000002GHyEIAW",
-  "rama-sravya-upadhyayula":   "005Hx000008q2XNIAY",
-  "saurabh-kumar":             "005Hx000005CHIMIA4",
-  "shaik-afrid":               "005Hx000009zZGbIAM",
-  "srinivas-vikas-kalidindi":  "005Hx000006ceDtIAI",
-  "yagya-ram-verma":           "005Hx000006fs7RIAQ",
-  // Swati Devsoth · Vivek Pai Baidebettu
-  "aditya-kumar-singh":        "005Hx000009D4LZIA0",
-  "ashish-shrivastav":         "005Hx000006Kfd3IAC",
-  "ashok-kumar":               "005Hx0000058o9dIAA",
-  "bhagya-laxmi-panyam":       "0053y00000GQTUSAA5",
-  "harsha-vardhan-yarlagadda": "005Hx000002k5MvIAI",
-  "jitender-kumar":            "005Hx000003Rzk1IAC",
-  "manogna-samayamantula":     "005Hx000003vWsfIAE",
-  "nilesh-gosavi":             "005Hx0000099GUzIAM",
-  "rachana-miriyala":          "005Hx000009STebIAG",
-  "rajneesh-pal":              "005Hx000004sD2nIAE",
-  "rushikesh-bidve":           "005Hx0000072knVIAQ",
-  "sagar-dixit":               "005Hx000009LiyXIAS",
-  "saitejasakesh-sadineni":    "005Hx000005PeozIAC",
-  "saravan-bhetanabhotla":     "005Hx000005W1HRIA0",
-  "sravani-damacharla":        "005Hx0000027hwjIAA",
-  "vinisha-r":                 "005Hx000006XkBtIAK",
-  // Swati Devsoth · Suchetana CI
-  "annanya-jha":               "005Hx000006l7x3IAA",
-  "bhushan-mhala":             "005Hx00000561OLIAY",
-  "deepak-hatwar":             "005Hx000005Y2kTIAS",
-  "deepika-thakur":            "005Hx000001Ngu1IAC",
-  "hrushi-anirudh-ayyagari":   "005Hx000009SpX3IAK",
-  "jahnavi-lukka":             "005Hx000005lRrVIAU",
-  "kaleemuddin-mohammed":      "0053y00000GL7hxAAD",
-  "kousik-perneni":            "005Hx000003vVi5IAE",
-  "mansi-mandhare":            "005Hx000004HWMAIA4",
-  "mastanaiah-vinnakota":      "005Hx000003ewYDIAY",
-  "ramasubbaiah-dasari":       "005Hx000000aJSLIA2",
-  "sai-kumar-veeramalla":      "005Hx000008lthCIAQ",
-  "sarika-thatikonda":         "005Hx000004HWsPIAW",
-  "sasidhar-reddy":            "005Hx000008DCWbIAO",
-  "shravan-burra":             "005Hx000008Ay6LIAS",
-  "tejaswi-naidu-kurra":       "005Hx000003Qg1tIAC",
-  "venkata-polisetti":         "005Hx000009CozxIAC",
-  "vikram-singh":              "005Hx000004CL4nIAG"
-};
-
-// Reverse map: SF User Id → person id
-const SF_UID_TO_PERSON_ID = Object.fromEntries(
-  Object.entries(SF_USER_IDS).map(([pid, uid]) => [uid, pid])
-);
-
-async function fetchDataJson() {
-  const banner = document.getElementById("live-banner");
-  if (banner) { banner.textContent = "Loading live data…"; banner.style.display = "block"; }
-  try {
-    const resp = await fetch("data.json?t=" + Date.now());
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const d = await resp.json();
-    const engineers = d.engineers || {};
-    // Apply total case counts and per-topic counts to SCOPE_PEOPLE
-    Object.values(SCOPE_PEOPLE).forEach(people => {
-      people.forEach(p => {
-        const uid = SF_USER_IDS[p.id];
-        if (!uid || !engineers[uid]) return;
-        const live = engineers[uid];
-        p.totalCases = live.totalCases || 0;
-        // Update caseCount on each theme using taxonomy name mapping
-        if (p.themes && live.topics) {
-          p.themes.forEach(theme => {
-            const mapped = THEME_TO_TAXONOMY[theme.id];
-            if (!mapped) return;
-            const count = mapped.reduce((s, t) => s + (live.topics[t] || 0), 0);
-            theme.caseCount = count;
-          });
-        }
-      });
+  // Swarm leads
+  var swarmSel = document.getElementById('fSwarm');
+  PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('swarm') !== -1; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); })
+    .forEach(function(p){
+      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; swarmSel.appendChild(o);
     });
-    rebuildPersonList(document.getElementById("person-search").value || "");
-    render();
-    const ts = d.generatedAt ? new Date(d.generatedAt).toLocaleString() : "recently";
-    if (banner) { banner.textContent = "✓ Live data loaded — refreshed " + ts; setTimeout(() => { banner.style.display = "none"; }, 4000); }
-  } catch(e) {
-    console.warn("data.json fetch failed:", e);
-    if (banner) { banner.textContent = "⚠ Could not load live data — showing last snapshot"; setTimeout(() => { banner.style.display = "none"; }, 4000); }
-  }
+
+  // Managers (Sr Manager + Manager, not Director or Swarm)
+  var mgrSel = document.getElementById('fManager');
+  PEOPLE.filter(function(p){
+    var t = p.title.toLowerCase();
+    return (t.indexOf('manager') !== -1) && (t.indexOf('swarm') === -1) && (t.indexOf('director') === -1);
+  }).sort(function(a,b){ return a.name.localeCompare(b.name); })
+    .forEach(function(p){
+      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; mgrSel.appendChild(o);
+    });
+
+  // Engineers (TSEs)
+  var engSel = document.getElementById('fEngineer');
+  PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('support engineer') !== -1; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); })
+    .forEach(function(p){
+      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; engSel.appendChild(o);
+    });
+})();
+
+// ============================================================
+// STATE
+// ============================================================
+var selectedId = null;
+var charts = {};
+
+function getScope() {
+  // returns array of engineer names in scope, or null for all
+  if (!selectedId) return null;
+  return descNames(selectedId);
 }
 
-// Maps theme id → Salesforce CaseReportingTaxonomy names
-const THEME_TO_TAXONOMY = {
-  "email-domain-verification": ["Core Email-Email Delivery", "Core Email-Email Logs"],
-  "eac-migration":             ["Sync Solutions-EAC (Email to Core Migration)", "Sync Solutions-EAC (Sync Issues)"],
-  "eac-setup":                 ["Sync Solutions-EAC (Initial Setup)"],
-  "isv-domain-whitelist":      ["Core Email-Email Delivery"],
-  "email-deliverability":      ["Core Email-Email Relay", "Core Email-Email Logs"],
-  "outlook-calendar-sync":     ["Sync Solutions-EAC (Activities Timeline)", "Sync Solutions-EAC (Sync Issues)"],
-  "chatter-notifications":     ["Collaboration Tools-Chatter"],
-  "mfa-security":              ["Multi Factor Authentication-Extension Request", "Multi Factor Authentication-General Education / How-to question", "Multi Factor Authentication-Setup Assistance"],
-  "email-change":              ["Admin Modification-Admin Change Request"],
-  "sandbox-data-cloud":        ["Data Streams/DLOs-Other Connectors", "Data Cloud Agent"],
-  "salesforce-inbox":          ["MailApp Integrations-Outlook Integration (without Inbox)"],
-  "flow-email-actions":        ["Configuration-Flow Builder"],
-  "omni-channel-routing":      ["Omni Channel-Setup and Configuration"],
-  "connected-app-oauth":       ["Authentication-OAuth"]
-};
+function filteredCases() {
+  var scope    = getScope();
+  var search   = (document.getElementById('fSearch').value || '').toLowerCase();
+  var kaF      = document.getElementById('fKA').value;
+  var topicF   = document.getElementById('fTopic').value;
+  var podF     = document.getElementById('fPod').value;
+  var swarmF   = document.getElementById('fSwarm').value;
+  var mgrF     = document.getElementById('fManager').value;
+  var engF     = document.getElementById('fEngineer').value;
 
-async function fetchLiveCaseCounts() {
-  const host = window.location.hostname;
-  const isGitHubPages = host.includes("github.io");
-  const isSalesforce = host.includes("salesforce.com") || host.includes("force.com");
-
-  // On GitHub Pages: load pre-built data.json
-  if (isGitHubPages) {
-    await fetchDataJson();
-    return;
+  // pod → set of names
+  var podEngs = null;
+  if (podF) {
+    podEngs = {};
+    PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
   }
 
-  // Only run live SF queries when hosted on Salesforce
-  if (!isSalesforce) return;
-
-  const banner = document.getElementById("live-banner");
-  if (banner) { banner.textContent = "Refreshing live case counts…"; banner.style.display = "block"; }
-
-  try {
-    const since = new Date();
-    since.setDate(since.getDate() - 30);
-    const sinceStr = since.toISOString().split("T")[0] + "T00:00:00Z";
-    const ids = Object.values(SF_USER_IDS);
-
-    // Salesforce limits IN clause to ~200 items — batch into groups of 180
-    const BATCH = 180;
-    const countMap = {};
-    for (let i = 0; i < ids.length; i += BATCH) {
-      const batch = ids.slice(i, i + BATCH);
-      const inList = batch.map(id => "'" + id + "'").join(",");
-      const soql = "SELECT OwnerId, COUNT(Id) cases FROM Case WHERE CreatedDate >= " +
-                   sinceStr + " AND OwnerId IN (" + inList + ") GROUP BY OwnerId";
-      const url = "/services/data/v64.0/query?q=" + encodeURIComponent(soql);
-      const resp = await fetch(url, { headers: { "Accept": "application/json" } });
-      if (!resp.ok) throw new Error("API error " + resp.status);
-      const data = await resp.json();
-      (data.records || []).forEach(r => { countMap[r.OwnerId] = r.cases; });
+  // swarm lead → set of descendant names (engineers under that swarm lead's reporting chain)
+  var swarmEngs = null;
+  if (swarmF) {
+    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
+    if (swarmPerson) {
+      swarmEngs = {};
+      descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n] = true; });
     }
+  }
 
-    // Apply fetched counts back to SCOPE_PEOPLE
-    Object.values(SCOPE_PEOPLE).forEach(people => {
-      people.forEach(p => {
-        const uid = SF_USER_IDS[p.id];
-        if (uid && countMap[uid] !== undefined) {
-          p.totalCases = countMap[uid];
-        }
-      });
+  // manager → set of descendant names
+  var mgrEngs = null;
+  if (mgrF) {
+    var mgrPerson = PEOPLE.filter(function(p){ return p.name === mgrF; })[0];
+    if (mgrPerson) {
+      mgrEngs = {};
+      descNames(mgrPerson.id).forEach(function(n){ mgrEngs[n] = true; });
+    }
+  }
+
+  return CASES.filter(function(c) {
+    if (scope      && scope.indexOf(c.owner) === -1 && scope.indexOf(c.manager) === -1) return false;
+    if (podEngs    && !podEngs[c.owner]    && !podEngs[c.manager])    return false;
+    if (swarmEngs  && !swarmEngs[c.owner]  && !swarmEngs[c.manager])  return false;
+    if (mgrEngs    && !mgrEngs[c.owner]    && !mgrEngs[c.manager])    return false;
+    if (engF       && c.owner !== engF)                                return false;
+    if (search && c.subject.toLowerCase().indexOf(search) === -1 && c.owner.toLowerCase().indexOf(search) === -1) return false;
+    if (topicF && getTopic(c.subject) !== topicF) return false;
+    if (kaF) { var k = KA_MAP[getTopic(c.subject)]; if (k && k.s !== kaF) return false; }
+    return true;
+  });
+}
+
+function filteredKA() {
+  var scope   = getScope();
+  var podF    = document.getElementById('fPod').value;
+  var swarmF  = document.getElementById('fSwarm').value;
+  var mgrF    = document.getElementById('fManager').value;
+  var engF    = document.getElementById('fEngineer').value;
+
+  var podEngs = null;
+  if (podF) {
+    podEngs = {};
+    PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
+  }
+  var swarmEngs = null;
+  if (swarmF) {
+    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
+    if (swarmPerson) { swarmEngs = {}; descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n]=true; }); }
+  }
+  var mgrEngs = null;
+  if (mgrF) {
+    var mgrPerson = PEOPLE.filter(function(p){ return p.name === mgrF; })[0];
+    if (mgrPerson) { mgrEngs = {}; descNames(mgrPerson.id).forEach(function(n){ mgrEngs[n]=true; }); }
+  }
+
+  return KA.filter(function(k) {
+    if (scope     && scope.indexOf(k.author) === -1)     return false;
+    if (podEngs   && !podEngs[k.author])                 return false;
+    if (swarmEngs && !swarmEngs[k.author])               return false;
+    if (mgrEngs   && !mgrEngs[k.author])                 return false;
+    if (engF      && k.author !== engF)                  return false;
+    return true;
+  });
+}
+
+// ============================================================
+// TREE RENDER
+// ============================================================
+function buildNode(id, depth) {
+  var p = byId[id]; if (!p) return null;
+  var q = (document.getElementById('tSearch').value || '').toLowerCase();
+  var kids = children[id] || [];
+
+  var nameMatch = !q || p.name.toLowerCase().indexOf(q) !== -1 || p.title.toLowerCase().indexOf(q) !== -1;
+  var descMatch = false;
+  if (!nameMatch && q) {
+    descNames(id).forEach(function(n) { if (n.toLowerCase().indexOf(q) !== -1) descMatch = true; });
+  }
+  if (q && !nameMatch && !descMatch) return null;
+
+  var node = document.createElement('div'); node.className = 'tn';
+  var row  = document.createElement('div'); row.className  = 'tr';
+  if (selectedId === id) row.classList.add('selected');
+
+  var tog = document.createElement('div'); tog.className = 'ttog';
+  tog.textContent = kids.length ? (depth < 2 ? '▼' : '▶') : '·';
+  row.appendChild(tog);
+
+  var av = document.createElement('div');
+  av.className = 'tav' + (selectedId === id ? ' on' : '');
+  av.textContent = p.name.split(' ').slice(0,2).map(function(w){return w[0];}).join('');
+  row.appendChild(av);
+
+  var nm = document.createElement('div'); nm.className = 'tname'; nm.textContent = p.name;
+  row.appendChild(nm);
+
+  var rb = document.createElement('span');
+  rb.className = 'tbadge ' + roleClass(p.title);
+  rb.textContent = shortRole(p.title);
+  row.appendChild(rb);
+
+  node.appendChild(row);
+
+  var wrap = document.createElement('div');
+  wrap.className = 'tc' + (depth < 2 ? ' open' : '');
+  kids.forEach(function(kid) { var cn = buildNode(kid, depth + 1); if (cn) wrap.appendChild(cn); });
+  node.appendChild(wrap);
+
+  row.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (kids.length) {
+      var open = wrap.classList.contains('open');
+      wrap.classList.toggle('open');
+      tog.textContent = open ? '▶' : '▼';
+    }
+    if (selectedId === id) {
+      clearSelection();
+    } else {
+      selectNode(id);
+    }
+  });
+  return node;
+}
+
+function renderTree() {
+  var root = document.getElementById('treeRoot');
+  while (root.firstChild) root.removeChild(root.firstChild);
+  var node = buildNode('KDV', 0);
+  if (node) root.appendChild(node);
+}
+
+function selectNode(id) {
+  selectedId = id;
+  var p = byId[id];
+  var banner = document.getElementById('ctxBanner');
+  banner.style.display = 'flex';
+  document.getElementById('ctxName').textContent = p.name;
+  document.getElementById('ctxSub').textContent  = '(' + shortRole(p.title) + ') — ' + descNames(id).length + ' people in scope';
+  renderTree();
+  renderAll();
+}
+
+function clearSelection() {
+  selectedId = null;
+  document.getElementById('ctxBanner').style.display = 'none';
+  renderTree();
+  renderAll();
+}
+
+// ============================================================
+// KPI
+// ============================================================
+function renderKPIs() {
+  var fc = filteredCases(), fka = filteredKA();
+  var topics = {}; fc.forEach(function(c) { topics[getTopic(c.subject)] = true; });
+  var tl = Object.keys(topics);
+  var miss = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'missing'; }).length;
+  var part = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'partial'; }).length;
+  var voc  = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'voc'; }).length;
+  var engs = {}; fc.forEach(function(c){ engs[c.owner] = true; });
+  document.getElementById('kCases').textContent  = fc.length;
+  document.getElementById('kTopics').textContent = tl.length;
+  document.getElementById('kMiss').textContent   = miss;
+  document.getElementById('kPart').textContent   = part;
+  document.getElementById('kVOC').textContent    = voc;
+  document.getElementById('kKA').textContent     = fka.length;
+  document.getElementById('kEngs').textContent   = Object.keys(engs).length;
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+var pal = ['#0176d3','#2e844a','#dd7a01','#9050e9','#c23934','#014486','#06857b','#e4a201','#fe9339','#3a6ea5'];
+
+function renderCharts() {
+  var fc = filteredCases(), fka = filteredKA();
+
+  // Topics bar chart
+  var tc = {};
+  fc.forEach(function(c){ var t = getTopic(c.subject); tc[t] = (tc[t]||0)+1; });
+  var te = Object.entries(tc).sort(function(a,b){return b[1]-a[1];}).slice(0,9);
+  var tl = te.map(function(e){return e[0];}), td = te.map(function(e){return e[1];});
+  var tcols = tl.map(function(l){
+    var s = KA_MAP[l] && KA_MAP[l].s;
+    return s==='missing'?'#fe9339':s==='voc'?'#9050e9':s==='partial'?'#0176d3':'#2e844a';
+  });
+  if (charts.t) charts.t.destroy();
+  charts.t = new Chart(document.getElementById('cTopics'), {
+    type: 'bar',
+    data: { labels: tl, datasets: [{ data: td, backgroundColor: tcols, borderRadius: 3 }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) {
+        var s = KA_MAP[ctx.label] && KA_MAP[ctx.label].s;
+        var tag = s==='missing'?'Draft KA Needed':s==='voc'?'VOC Opportunity':s==='partial'?'Needs Update':'Article Exists';
+        return ctx.formattedValue + ' cases — ' + tag;
+      }}}},
+      scales: { x: { ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 9 } } } }
+    }
+  });
+
+  // KA donut
+  var ec = {};
+  fka.forEach(function(k){ ec[k.author] = (ec[k.author]||0)+1; });
+  var ee = Object.entries(ec).sort(function(a,b){return b[1]-a[1];});
+  if (charts.k) charts.k.destroy();
+  if (ee.length) {
+    charts.k = new Chart(document.getElementById('cKA'), {
+      type: 'doughnut',
+      data: { labels: ee.map(function(e){return e[0];}), datasets: [{ data: ee.map(function(e){return e[1];}), backgroundColor: pal.slice(0,ee.length), borderWidth: 2 }] },
+      options: { plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 12 } } } }
     });
-
-    // Refresh display
-    rebuildPersonList(document.getElementById("person-search").value || "");
-    render();
-    if (banner) { banner.textContent = "✓ Live case counts loaded (last 30 days)"; setTimeout(() => { banner.style.display = "none"; }, 3000); }
-  } catch (e) {
-    console.warn("Live case count fetch failed:", e);
-    if (banner) { banner.textContent = "⚠ Could not load live counts — showing cached data"; setTimeout(() => { banner.style.display = "none"; }, 4000); }
   }
 }
 
-// ── Init ───────────────────────────────────────────────────────────────────────
-buildStaticFilters();
-rebuildPersonList("");
-const firstPerson = activePerson();
-updateHeader(firstPerson);
-state.topics = new Set((firstPerson.themes || []).map(t => t.id));
-rebuildTopicFilters();
-renderSources();
-render();
-fetchLiveCaseCounts();
+// ============================================================
+// GAP TABLE
+// ============================================================
+function renderGap() {
+  var fc = filteredCases();
+  var td = {};
+  fc.forEach(function(c){ var t=getTopic(c.subject); if(!td[t]) td[t]={count:0,engs:{}}; td[t].count++; td[t].engs[c.owner]=true; });
+  var rows = Object.entries(td).sort(function(a,b){return b[1].count-a[1].count;});
+  var body = document.getElementById('bGap');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  if (!rows.length) {
+    var etr = document.createElement('tr'); var etd = document.createElement('td');
+    etd.colSpan = 6; etd.className = 'empty-row'; etd.textContent = 'No cases match the current filters.';
+    etr.appendChild(etd); body.appendChild(etr); return;
+  }
+
+  rows.forEach(function(entry) {
+    var topic = entry[0], info = entry[1];
+    var ka = KA_MAP[topic] || {s:'missing', an:'', at:'', gap:'No data available'};
+    var tr = document.createElement('tr');
+
+    // Topic
+    var c0 = document.createElement('td');
+    var b0 = document.createElement('strong'); b0.textContent = topic; c0.appendChild(b0); tr.appendChild(c0);
+
+    // Count
+    var c1 = document.createElement('td');
+    var b1 = document.createElement('strong'); b1.textContent = info.count; c1.appendChild(b1); tr.appendChild(c1);
+
+    // Recommendation badge
+    var c2 = document.createElement('td'); c2.appendChild(recBadge(ka.s)); tr.appendChild(c2);
+
+    // Article
+    var c3 = document.createElement('td');
+    if (ka.an) {
+      var a = document.createElement('a');
+      a.className = 'art-link'; a.target = '_blank';
+      a.href = 'https://help.salesforce.com/s/articleView?id=' + encodeURIComponent(ka.an);
+      a.textContent = '📄 ' + ka.an;
+      var sm = document.createElement('span'); sm.className = 'art-sub'; sm.textContent = ka.at;
+      c3.appendChild(a); c3.appendChild(sm);
+    } else {
+      var na = document.createElement('span'); na.style.cssText = 'color:var(--muted);font-size:.73rem;'; na.textContent = 'No article found'; c3.appendChild(na);
+    }
+    tr.appendChild(c3);
+
+    // Gap
+    var c4 = document.createElement('td');
+    var gt = document.createElement('span'); gt.className = 'gap-tag'; gt.textContent = '⚠ ' + ka.gap;
+    c4.appendChild(gt); tr.appendChild(c4);
+
+    // Engineers
+    var c5 = document.createElement('td');
+    Object.keys(info.engs).forEach(function(eng) { c5.appendChild(mkPill(eng)); });
+    tr.appendChild(c5);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ENGINEER TABLE
+// ============================================================
+function renderEng() {
+  var fc = filteredCases(), fka = filteredKA();
+  var ed = {};
+  fc.forEach(function(c){ if (!ed[c.owner]) ed[c.owner]={mgr:c.manager,cases:0}; ed[c.owner].cases++; });
+  var kae = {};
+  fka.forEach(function(k){ kae[k.author] = kae[k.author] || []; kae[k.author].push(k.title); });
+  var podMap = {};
+  PEOPLE.forEach(function(p){ podMap[p.name] = p.pod; });
+  var maxC = 1;
+  Object.values(ed).forEach(function(e){ if (e.cases > maxC) maxC = e.cases; });
+
+  var body = document.getElementById('bEng');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  Object.entries(ed).sort(function(a,b){ return (kae[b[0]]||[]).length-(kae[a[0]]||[]).length; })
+  .forEach(function(entry) {
+    var eng = entry[0], info = entry[1], ka = kae[eng]||[];
+    var pct = Math.round(info.cases/maxC*100);
+    var tr = document.createElement('tr');
+
+    var t0=document.createElement('td'); var sb=document.createElement('strong'); sb.textContent=eng; t0.appendChild(sb); tr.appendChild(t0);
+    var t1=document.createElement('td'); t1.style.fontSize='.73rem'; t1.textContent=info.mgr; tr.appendChild(t1);
+    var t2=document.createElement('td'); t2.appendChild(mkPill(podMap[eng]||'—')); tr.appendChild(t2);
+    var t3=document.createElement('td'); t3.textContent=info.cases; tr.appendChild(t3);
+
+    var t4=document.createElement('td');
+    var kb=document.createElement('strong'); kb.style.color='var(--brand)'; kb.textContent=ka.length; t4.appendChild(kb); tr.appendChild(t4);
+
+    var t5=document.createElement('td');
+    if (ka.length) { ka.slice(0,2).forEach(function(tt){ var p2=mkPill(tt.length>36?tt.substring(0,34)+'…':tt); p2.title=tt; t5.appendChild(p2); }); }
+    else { var n5=document.createElement('span'); n5.style.cssText='color:var(--muted);font-size:.72rem;'; n5.textContent='None this period'; t5.appendChild(n5); }
+    tr.appendChild(t5);
+
+    var t6=document.createElement('td');
+    var ob=document.createElement('div'); ob.className='pbar';
+    var ib=document.createElement('div'); ib.className='pbar-fill'; ib.style.width=pct+'%';
+    ob.appendChild(ib); t6.appendChild(ob);
+    var lb=document.createElement('span'); lb.style.cssText='font-size:.66rem;color:var(--muted);margin-left:5px;'; lb.textContent=info.cases+' cases'; t6.appendChild(lb);
+    tr.appendChild(t6);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// MANAGER TABLE
+// ============================================================
+function renderMgr() {
+  var fc = filteredCases(), fka = filteredKA();
+  var md = {};
+  fc.forEach(function(c){ if (!md[c.manager]) md[c.manager]={engs:{},cases:0,topics:{}}; md[c.manager].engs[c.owner]=true; md[c.manager].cases++; var t=getTopic(c.subject); md[c.manager].topics[t]=(md[c.manager].topics[t]||0)+1; });
+  var kae = {};
+  fka.forEach(function(k){ kae[k.author]=(kae[k.author]||0)+1; });
+  var lvlMap = {};
+  PEOPLE.forEach(function(p){ lvlMap[p.name]=shortRole(p.title); });
+
+  var body = document.getElementById('bMgr');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  Object.entries(md).sort(function(a,b){return b[1].cases-a[1].cases;}).forEach(function(entry) {
+    var mgr=entry[0], info=entry[1];
+    var mgrKA = Object.keys(info.engs).reduce(function(s,e){ return s+(kae[e]||0); }, 0);
+    var topT  = Object.entries(info.topics).sort(function(a,b){return b[1]-a[1];}).slice(0,3);
+    var vocT  = Object.entries(info.topics).filter(function(t){ var k=KA_MAP[t[0]]; return k&&(k.s==='missing'||k.s==='voc'); }).map(function(t){return t[0];});
+    var tr=document.createElement('tr');
+
+    var t0=document.createElement('td'); var sb=document.createElement('strong'); sb.textContent=mgr; t0.appendChild(sb); tr.appendChild(t0);
+    var t1=document.createElement('td');
+    var lb=document.createElement('span'); lb.style.cssText='font-size:.7rem;background:#f3ebff;color:#6a14d4;border-radius:8px;padding:1px 7px;'; lb.textContent=lvlMap[mgr]||'Manager'; t1.appendChild(lb); tr.appendChild(t1);
+    var t2=document.createElement('td'); t2.textContent=Object.keys(info.engs).length; tr.appendChild(t2);
+    var t3=document.createElement('td'); t3.textContent=info.cases; tr.appendChild(t3);
+    var t4=document.createElement('td'); var kb=document.createElement('strong'); kb.style.color='var(--brand)'; kb.textContent=mgrKA; t4.appendChild(kb); tr.appendChild(t4);
+
+    var t5=document.createElement('td');
+    topT.forEach(function(tt){
+      var p2=mkPill(tt[0]);
+      var k=KA_MAP[tt[0]];
+      if (k&&(k.s==='missing'||k.s==='voc')) { var w=document.createElement('span'); w.style.cssText='font-size:.6rem;color:var(--red);margin-left:2px;'; w.textContent='⚠'; p2.appendChild(w); }
+      t5.appendChild(p2);
+    }); tr.appendChild(t5);
+
+    var t6=document.createElement('td');
+    if (vocT.length) { vocT.forEach(function(vt){ var b=mkBadge(vt,'b-voc'); b.style.margin='2px'; t6.appendChild(b); }); }
+    else { var n6=document.createElement('span'); n6.style.cssText='color:var(--muted);font-size:.72rem;'; n6.textContent='None identified'; t6.appendChild(n6); }
+    tr.appendChild(t6);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// HIERARCHY TABLE (with case + KA counts, clickable rows)
+// ============================================================
+function renderHier() {
+  var cMap={}, kMap={};
+  CASES.forEach(function(c){ cMap[c.owner]=(cMap[c.owner]||0)+1; });
+  KA.forEach(function(k){ kMap[k.author]=(kMap[k.author]||0)+1; });
+
+  var scope = selectedId ? descendants(selectedId) : PEOPLE.map(function(p){return p.id;});
+  var body = document.getElementById('bHier');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  scope.forEach(function(id) {
+    var p = byId[id]; if (!p || p.id==='KDV') return;
+    var mgr = p.mid ? byId[p.mid] : null;
+    var cCount = cMap[p.name]||0, kCount = kMap[p.name]||0;
+    var tr = document.createElement('tr');
+    if (cCount>0||kCount>0) tr.style.background='#f8fcff';
+
+    // Name (clickable → selects in tree)
+    var t0=document.createElement('td');
+    t0.style.cursor='pointer'; t0.title='Click to filter by '+p.name;
+    var av=document.createElement('span'); av.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--light);color:var(--dark);font-size:.56rem;font-weight:700;margin-right:5px;flex-shrink:0;vertical-align:middle;';
+    av.textContent=p.name.split(' ').slice(0,2).map(function(w){return w[0];}).join('');
+    var nm=document.createElement('strong'); nm.textContent=p.name;
+    t0.appendChild(av); t0.appendChild(nm);
+    t0.addEventListener('click', function(){selectNode(id);});
+    tr.appendChild(t0);
+
+    var t1=document.createElement('td');
+    var rb=document.createElement('span'); rb.className='tbadge '+roleClass(p.title); rb.style.cssText='font-size:.66rem;border-radius:8px;padding:2px 7px;'; rb.textContent=shortRole(p.title); t1.appendChild(rb);
+    var sub=document.createElement('div'); sub.style.cssText='font-size:.65rem;color:var(--muted);margin-top:2px;'; sub.textContent=p.title; t1.appendChild(sub);
+    tr.appendChild(t1);
+
+    var t2=document.createElement('td'); t2.style.fontSize='.74rem'; t2.textContent=mgr?mgr.name:'—'; tr.appendChild(t2);
+
+    var t3=document.createElement('td'); t3.appendChild(mkPill(p.pod)); tr.appendChild(t3);
+
+    var t4=document.createElement('td');
+    if (cCount) { var cb=document.createElement('strong'); cb.style.color='var(--brand)'; cb.textContent=cCount; t4.appendChild(cb); } else { t4.textContent='—'; }
+    tr.appendChild(t4);
+
+    var t5=document.createElement('td');
+    if (kCount) { var kb=document.createElement('strong'); kb.style.color='var(--green)'; kb.textContent=kCount; t5.appendChild(kb); } else { t5.textContent='—'; }
+    tr.appendChild(t5);
+
+    var t6=document.createElement('td');
+    var sl=document.createElement('a'); sl.href='https://salesforce.enterprise.slack.com/team/'+encodeURIComponent(p.slack); sl.target='_blank'; sl.style.cssText='color:var(--brand);font-size:.74rem;text-decoration:none;'; sl.textContent='@'+p.slack; t6.appendChild(sl);
+    tr.appendChild(t6);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// TABS
+// ============================================================
+document.querySelectorAll('.tab').forEach(function(tab) {
+  tab.addEventListener('click', function(){
+    var t = tab.getAttribute('data-tab');
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});
+    document.querySelectorAll('.tpanel').forEach(function(x){x.classList.remove('active');});
+    tab.classList.add('active');
+    document.getElementById('tab-'+t).classList.add('active');
+  });
+});
+
+// ============================================================
+// CONTROLS
+// ============================================================
+document.getElementById('btnReset').addEventListener('click', function(){
+  document.getElementById('fSearch').value='';
+  document.getElementById('fKA').value='';
+  document.getElementById('fTopic').value='';
+  document.getElementById('fPod').value='';
+  document.getElementById('fSwarm').value='';
+  document.getElementById('fManager').value='';
+  document.getElementById('fEngineer').value='';
+  clearSelection();
+});
+document.getElementById('btnExpand').addEventListener('click', function(){
+  document.querySelectorAll('.tc').forEach(function(e){e.classList.add('open');});
+  document.querySelectorAll('.ttog').forEach(function(e){if(e.textContent==='▶') e.textContent='▼';});
+});
+document.getElementById('btnCollapse').addEventListener('click', function(){
+  document.querySelectorAll('.tc').forEach(function(e){e.classList.remove('open');});
+  document.querySelectorAll('.ttog').forEach(function(e){if(e.textContent==='▼') e.textContent='▶';});
+});
+document.getElementById('ctxClear').addEventListener('click', clearSelection);
+document.getElementById('tSearch').addEventListener('input', renderTree);
+['fSearch','fKA','fTopic','fPod','fSwarm','fManager','fEngineer'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', renderAll);
+  document.getElementById(id).addEventListener('change', renderAll);
+});
+
+// ============================================================
+// RENDER ALL
+// ============================================================
+function renderAll() {
+  renderKPIs();
+  renderCharts();
+  renderGap();
+  renderEng();
+  renderMgr();
+  renderHier();
+}
+
+renderTree();
+renderAll();
 </script>
 </body>
 </html>
