@@ -564,13 +564,6 @@ function descNames(id) {
       var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; mgrSel.appendChild(o);
     });
 
-  // Engineers (TSEs)
-  var engSel = document.getElementById('fEngineer');
-  PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('support engineer') !== -1; })
-    .sort(function(a,b){ return a.name.localeCompare(b.name); })
-    .forEach(function(p){
-      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; engSel.appendChild(o);
-    });
 })();
 
 // ============================================================
@@ -1078,6 +1071,29 @@ function renderAll() {
   renderMgr();
   renderHier();
 }
+
+// Load live engineer data from data.json
+fetch('data.json')
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    var engSel = document.getElementById('fEngineer');
+    var names = Object.values(data.engineers || {})
+      .map(function(e){ return e.name; })
+      .filter(Boolean)
+      .sort(function(a,b){ return a.localeCompare(b); });
+    names.forEach(function(name) {
+      var o = document.createElement('option'); o.value = name; o.textContent = name; engSel.appendChild(o);
+    });
+  })
+  .catch(function() {
+    // fallback to PEOPLE array if data.json unavailable
+    var engSel = document.getElementById('fEngineer');
+    PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('support engineer') !== -1; })
+      .sort(function(a,b){ return a.name.localeCompare(b.name); })
+      .forEach(function(p){
+        var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; engSel.appendChild(o);
+      });
+  });
 
 renderTree();
 renderAll();
