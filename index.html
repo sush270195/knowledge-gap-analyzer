@@ -112,9 +112,13 @@ tr:hover td{background:#f5f8fc;}
   </svg>
   <div>
     <h1>Knowledge Gap &amp; VOC Dashboard</h1>
-    <p>Krishna Davuluri Org &nbsp;·&nbsp; Last 30 Days &nbsp;·&nbsp; Click any person in the hierarchy to filter</p>
+    <p>Krishna Davuluri Org &nbsp;·&nbsp; Last 30 Days &nbsp;·&nbsp; Live data from OrgCS</p>
   </div>
-  <div class="hdr-badge">LIVE · Krishna Org</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="syncStatus" style="font-size:.7rem;background:rgba(255,255,255,.15);color:#fff;border-radius:10px;padding:3px 10px;">Syncing…</span>
+    <button onclick="manualRefresh()" style="font-size:.7rem;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:10px;padding:3px 10px;cursor:pointer;">↻ Refresh</button>
+    <div class="hdr-badge">LIVE · OrgCS</div>
+  </div>
 </div>
 
 <!-- FILTER BAR -->
@@ -497,55 +501,9 @@ var PEOPLE = [
   {id:"YG", name:"Yojana Gajavelli", title:"Technical Support Engineer", email:"yojana.gajavelli@salesforce.com", slack:"yojana.gajavelli", mid:"AMR", pod:"India - Service Cloud"}
 ];
 
-var CASES = [
-  {num:"473781107", subject:"Unexpected behavior in productRevenueSchedules when changing quantity", owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"473487691", subject:"EAC Sync issue",                                                        owner:"Rohit Gilda",      manager:"Suchetana CI"},
-  {num:"473487692", subject:"Partial Sandbox Refresh Pending In Queue",                              owner:"Md Zeeshan Ahmad", manager:"Ankur Mishra"},
-  {num:"473487694", subject:"Tableau Cloud data auto-refresh not working",                           owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
-  {num:"c001",      subject:"Flow not triggering on record update",                                  owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"c002",      subject:"Process Builder migration to Flow",                                     owner:"Subhika Jha",      manager:"Mathews Abraham"},
-  {num:"c003",      subject:"Apex CPU limit exceeded in batch job",                                  owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
-  {num:"c004",      subject:"SOQL query governor limit 101 rows",                                    owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"c005",      subject:"Lightning web component not rendering in mobile",                       owner:"Rohit Gilda",      manager:"Suchetana CI"},
-  {num:"c006",      subject:"Email to Case attachment missing",                                      owner:"Subhika Jha",      manager:"Mathews Abraham"},
-  {num:"c007",      subject:"Sandbox refresh stuck in pending",                                      owner:"Md Zeeshan Ahmad", manager:"Ankur Mishra"},
-  {num:"c008",      subject:"Duplicate rules not working on Lead conversion",                        owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"c009",      subject:"REST API callout timeout in production",                                owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
-  {num:"c010",      subject:"Permission set not granting field access",                              owner:"Rohit Gilda",      manager:"Suchetana CI"},
-  {num:"c011",      subject:"Salesforce Inbox not syncing calendar",                                 owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
-  {num:"c012",      subject:"Custom metadata type deployment error",                                 owner:"Subhika Jha",      manager:"Mathews Abraham"},
-  {num:"c013",      subject:"Data loader upsert failing on external ID",                             owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
-  {num:"c014",      subject:"EAC activity not syncing to Salesforce",                               owner:"Rohit Gilda",      manager:"Suchetana CI"},
-  {num:"c015",      subject:"Screen flow next button not visible on mobile",                         owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"c016",      subject:"Approval process email notification not sent",                         owner:"Subhika Jha",      manager:"Mathews Abraham"},
-  {num:"c017",      subject:"Apex trigger recursion infinite loop",                                  owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
-  {num:"c018",      subject:"Login IP restriction locking out users",                                owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
-  {num:"c019",      subject:"Tableau Cloud refresh schedule not working",                            owner:"Jonathan Weng",    manager:"Francesca Settembrino"},
-  {num:"c020",      subject:"productRevenueSchedule quantity price recalculation",                   owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"c021",      subject:"Flow interview fault path not executing",                               owner:"Subhika Jha",      manager:"Mathews Abraham"},
-  {num:"c022",      subject:"Too many SOQL queries 101 error in async context",                      owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
-  {num:"c023",      subject:"Sandbox org not available after refresh",                               owner:"Md Zeeshan Ahmad", manager:"Ankur Mishra"},
-  {num:"c024",      subject:"Winter release critical update breaking flows",                         owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"c025",      subject:"Data export service schedule not triggering",                           owner:"Rohit Gilda",      manager:"Suchetana CI"},
-  {num:"c026",      subject:"Named credential OAuth token refresh error",                            owner:"Aditya Kumar Singh",manager:"Mathews Abraham"},
-  {num:"c027",      subject:"LWC wire service returning null data",                                  owner:"Rohit Gilda",      manager:"Suchetana CI"},
-  {num:"c028",      subject:"Sharing rule not granting record access",                               owner:"Subhika Jha",      manager:"Mathews Abraham"},
-  {num:"c029",      subject:"Email deliverability bouncing in sandbox",                              owner:"Amith TG",        manager:"Mathews Abraham"},
-  {num:"c030",      subject:"Omni-Channel routing not assigning cases to queue",                     owner:"Jonathan Weng",    manager:"Francesca Settembrino"}
-];
-
-var KA = [
-  {num:"000385111", title:"Too many API email invocations error – Apex",                 author:"Sagarika B"},
-  {num:"000386160", title:"Debug Salesforce Web Service Callouts Using SoapUI",          author:"Sagarika B"},
-  {num:"000383497", title:"URL redirects in the Salesforce mobile app",                  author:"Sagarika B"},
-  {num:"000382001", title:"Resolving Apex CPU Time Limit Exceeded in Batch Jobs",        author:"Aditya Kumar Singh"},
-  {num:"000382002", title:"SOQL 101 query limit governor error guide",                   author:"Aditya Kumar Singh"},
-  {num:"000382003", title:"Sandbox Refresh Stuck in Pending – Steps to Resolve",         author:"Md Zeeshan Ahmad"},
-  {num:"000382004", title:"Flow not triggering on record update – common causes",         author:"Amith TG"},
-  {num:"000382005", title:"EAC Activity Sync – Troubleshooting Einstein Activity Capture",author:"Rohit Gilda"},
-  {num:"000382006", title:"Apex Trigger Recursion – Prevention Best Practices",          author:"Aditya Kumar Singh"},
-  {num:"000382007", title:"Login IP Restriction Lockout Resolution Steps",               author:"Jonathan Weng"}
-];
+// CASES and KA are loaded live from /api/data — see fetchAndRender() below
+var CASES = [];
+var KA = [];
 
 var TOPIC_RULES = [
   {t:"Flow / Process Builder",  kw:["flow","process builder","screen flow","interview","fault path"]},
@@ -1163,7 +1121,73 @@ var ENG_NAMES = [
     });
 })();
 
-renderAll();
+// ============================================================
+// LIVE DATA SYNC
+// ============================================================
+var SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
+
+function setSyncStatus(msg, color) {
+  var el = document.getElementById('syncStatus');
+  if (el) { el.textContent = msg; el.style.background = color || 'rgba(255,255,255,.15)'; }
+}
+
+function applyLiveData(data) {
+  // Rebuild CASES from live data — add manager via PEOPLE hierarchy
+  CASES = (data.cases || []).map(function(c) {
+    // Find manager: look up owner in PEOPLE by name, get their mid → parent name
+    var ownerPerson = PEOPLE.filter(function(p){ return p.name === c.owner; })[0];
+    var managerName = '';
+    if (ownerPerson && ownerPerson.mid && byId[ownerPerson.mid]) {
+      managerName = byId[ownerPerson.mid].name;
+    }
+    return {
+      num:     c.num,
+      subject: c.topic || c.subject || '',  // use taxonomy topic as subject for getTopic
+      owner:   c.owner,
+      manager: managerName,
+      topic:   c.topic || '',
+      status:  c.status || '',
+      created: c.created || ''
+    };
+  });
+
+  KA = (data.ka || []).map(function(k) {
+    return { num: k.num, title: k.title, author: k.author };
+  });
+
+  var ts = data.generatedAt ? new Date(data.generatedAt).toLocaleTimeString() : '?';
+  setSyncStatus('Synced ' + ts, 'rgba(46,132,74,.8)');
+  renderAll();
+}
+
+function fetchAndRender() {
+  setSyncStatus('Syncing…', 'rgba(255,255,255,.15)');
+  fetch('/api/data')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { applyLiveData(data); })
+    .catch(function(err) {
+      setSyncStatus('Sync failed', 'rgba(194,57,52,.8)');
+      console.error('[sync] Failed to fetch /api/data:', err);
+      renderAll(); // render with whatever CASES/KA we have
+    });
+}
+
+function manualRefresh() {
+  setSyncStatus('Syncing…', 'rgba(255,255,255,.15)');
+  fetch('/api/refresh')
+    .then(function(r) { return r.json(); })
+    .then(function() { return fetch('/api/data'); })
+    .then(function(r) { return r.json(); })
+    .then(function(data) { applyLiveData(data); })
+    .catch(function(err) {
+      setSyncStatus('Refresh failed', 'rgba(194,57,52,.8)');
+      console.error('[sync] Manual refresh failed:', err);
+    });
+}
+
+// Initial load + auto-refresh every 30 min
+fetchAndRender();
+setInterval(fetchAndRender, SYNC_INTERVAL);
 </script>
 </body>
 </html>

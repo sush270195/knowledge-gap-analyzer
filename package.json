@@ -1,11 +1,12 @@
 {
   "name": "knowledge-gap-analyzer",
-  "version": "1.0.0",
-  "description": "Salesforce Knowledge Gap Analyzer Dashboard",
+  "version": "2.0.0",
+  "description": "Salesforce Knowledge Gap Analyzer Dashboard – live OrgCS data",
+  "main": "server.js",
   "scripts": {
-    "start": "serve . -p $PORT"
+    "start": "node server.js"
   },
-  "dependencies": {
-    "serve": "^14.2.0"
+  "engines": {
+    "node": ">=18"
   }
 }
