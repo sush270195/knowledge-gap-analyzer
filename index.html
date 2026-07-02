@@ -159,10 +159,8 @@ tr:hover td{background:#f5f8fc;}
   <select id="fTopic"><option value="">All Topics</option></select>
   <label>Pod</label>
   <select id="fPod"><option value="">All Pods</option></select>
-  <label>Swarm Lead</label>
-  <select id="fSwarm"><option value="">All Swarm Leads</option></select>
-  <label>Manager</label>
-  <select id="fManager"><option value="">All Managers</option></select>
+  <label>Lead / Manager</label>
+  <select id="fLead"><option value="">All Leads &amp; Managers</option></select>
   <label>Engineer</label>
   <select id="fEngineer"><option value="">All Engineers</option></select>
   <button class="fbtn ml" id="btnReset">Reset All</button>
@@ -357,6 +355,9 @@ var PEOPLE = [
   {id:"ASH", name:"Amisha Sharma",             title:"Swarm Lead",                                     email:"amisha.sharma@salesforce.com",         slack:"amisha.sharma",       mid:"MMT", pod:"Swarm"},
   {id:"SLT", name:"Saloni Tiwari",             title:"Swarm Lead",                                     email:"saloni.tiwari@salesforce.com",         slack:"saloni.tiwari",       mid:"MMT", pod:"Swarm"},
   {id:"VKN", name:"Vinod Kumar Nadimpalli",    title:"Swarm Lead",                                     email:"kumar.vinod@salesforce.com",           slack:"kumar.vinod",         mid:"MMT", pod:"Swarm"},
+  {id:"ANS", name:"Anant Singh",               title:"Swarm Lead",                                     email:"anant.singh@salesforce.com",           slack:"anant.singh",         mid:"",    pod:"Swarm"},
+  {id:"DVS", name:"Durga Venkata Sai Sudhabathula", title:"Swarm Lead",                               email:"durga.sudhabathula@salesforce.com",     slack:"durga.sudhabathula",  mid:"",    pod:"Swarm"},
+  {id:"SRD", name:"Suraj Dewangan",            title:"Swarm Lead",                                     email:"suraj.dewangan@salesforce.com",         slack:"suraj.dewangan",      mid:"",    pod:"Swarm"},
   // Engineers – live from OrgCS (185 TSEs)
   {id:"AMM", name:"Abdul Muqeeth Mohammed", title:"Associate Technical Support Engineer", email:"abdul.muqeeth.mohammed@salesforce.com", slack:"abdul.muqeeth.mohammed", mid:"ANM", pod:"India - Service Cloud"},
   {id:"AR", name:"Abdul Rahman", title:"Associate Technical Support Engineer", email:"abdul.rahman@salesforce.com", slack:"abdul.rahman", mid:"HAL", pod:"India - Sales Cloud"},
@@ -725,23 +726,33 @@ function descNames(id) {
     var o = document.createElement('option'); o.value = pod; o.textContent = pod; pSel.appendChild(o);
   });
 
-  // Swarm leads
-  var swarmSel = document.getElementById('fSwarm');
-  PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('swarm') !== -1; })
-    .sort(function(a,b){ return a.name.localeCompare(b.name); })
-    .forEach(function(p){
-      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; swarmSel.appendChild(o);
-    });
-
-  // Managers (Sr Manager + Manager, not Director or Swarm)
-  var mgrSel = document.getElementById('fManager');
-  PEOPLE.filter(function(p){
-    var t = p.title.toLowerCase();
-    return (t.indexOf('manager') !== -1) && (t.indexOf('swarm') === -1) && (t.indexOf('director') === -1);
-  }).sort(function(a,b){ return a.name.localeCompare(b.name); })
-    .forEach(function(p){
-      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; mgrSel.appendChild(o);
-    });
+  // Combined Lead / Manager filter – hardcoded allowlists
+  var SWARM_LEADS = [
+    "Anant Singh","Anudeep Gopagoni","Durga Venkata Sai Sudhabathula",
+    "Jasmeet Singh Saluja","Khan Anas Rehmani","Ravi Sourav","Saloni Tiwari",
+    "Shakti Singh","Simardeep Bindra","Suraj Dewangan","Sushmita Srivastava",
+    "Vinay Poka","Vinod Kumar Nadimpalli"
+  ];
+  var MANAGERS = [
+    "Amit Daga","Amit Verma","Anil Maharana","Ankur Mishra","Anurikt Wadhwa",
+    "Deep Sanghani","Mathews Abraham","Mayank Gairola","Mayur Rohra",
+    "Mudit Mathur","Priyanka Mukherjee","Pushpa Devaraj","Remya Krishnan"
+  ];
+  var leadSel = document.getElementById('fLead');
+  var optSL = document.createElement('optgroup'); optSL.label = '── Swarm Leads ──';
+  SWARM_LEADS.slice().sort().forEach(function(name){
+    var p = PEOPLE.filter(function(x){ return x.name === name; })[0];
+    if (!p) return;
+    var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; optSL.appendChild(o);
+  });
+  leadSel.appendChild(optSL);
+  var optMG = document.createElement('optgroup'); optMG.label = '── Managers ──';
+  MANAGERS.slice().sort().forEach(function(name){
+    var p = PEOPLE.filter(function(x){ return x.name === name; })[0];
+    if (!p) return;
+    var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; optMG.appendChild(o);
+  });
+  leadSel.appendChild(optMG);
 
 })();
 
@@ -763,8 +774,7 @@ function filteredCases() {
   var kaF      = document.getElementById('fKA').value;
   var topicF   = document.getElementById('fTopic').value;
   var podF     = document.getElementById('fPod').value;
-  var swarmF   = document.getElementById('fSwarm').value;
-  var mgrF     = document.getElementById('fManager').value;
+  var leadF    = document.getElementById('fLead').value;
   var engF     = document.getElementById('fEngineer').value;
 
   // pod → set of names
@@ -774,32 +784,21 @@ function filteredCases() {
     PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
   }
 
-  // swarm lead → set of descendant names (engineers under that swarm lead's reporting chain)
-  var swarmEngs = null;
-  if (swarmF) {
-    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
-    if (swarmPerson) {
-      swarmEngs = {};
-      descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n] = true; });
-    }
-  }
-
-  // manager → set of descendant names
-  var mgrEngs = null;
-  if (mgrF) {
-    var mgrPerson = PEOPLE.filter(function(p){ return p.name === mgrF; })[0];
-    if (mgrPerson) {
-      mgrEngs = {};
-      descNames(mgrPerson.id).forEach(function(n){ mgrEngs[n] = true; });
+  // lead/manager → set of descendant names
+  var leadEngs = null;
+  if (leadF) {
+    var leadPerson = PEOPLE.filter(function(p){ return p.name === leadF; })[0];
+    if (leadPerson) {
+      leadEngs = {};
+      descNames(leadPerson.id).forEach(function(n){ leadEngs[n] = true; });
     }
   }
 
   return CASES.filter(function(c) {
-    if (scope      && scope.indexOf(c.owner) === -1 && scope.indexOf(c.manager) === -1) return false;
-    if (podEngs    && !podEngs[c.owner]    && !podEngs[c.manager])    return false;
-    if (swarmEngs  && !swarmEngs[c.owner]  && !swarmEngs[c.manager])  return false;
-    if (mgrEngs    && !mgrEngs[c.owner]    && !mgrEngs[c.manager])    return false;
-    if (engF       && c.owner !== engF)                                return false;
+    if (scope    && scope.indexOf(c.owner) === -1 && scope.indexOf(c.manager) === -1) return false;
+    if (podEngs  && !podEngs[c.owner]   && !podEngs[c.manager])   return false;
+    if (leadEngs && !leadEngs[c.owner]  && !leadEngs[c.manager])  return false;
+    if (engF     && c.owner !== engF)                              return false;
     if (search && c.subject.toLowerCase().indexOf(search) === -1 && c.owner.toLowerCase().indexOf(search) === -1) return false;
     if (topicF && getTopic(c.subject) !== topicF) return false;
     if (kaF) { var k = KA_MAP[getTopic(c.subject)]; if (k && k.s !== kaF) return false; }
@@ -810,8 +809,7 @@ function filteredCases() {
 function filteredKA() {
   var scope   = getScope();
   var podF    = document.getElementById('fPod').value;
-  var swarmF  = document.getElementById('fSwarm').value;
-  var mgrF    = document.getElementById('fManager').value;
+  var leadF   = document.getElementById('fLead').value;
   var engF    = document.getElementById('fEngineer').value;
 
   var podEngs = null;
@@ -819,23 +817,17 @@ function filteredKA() {
     podEngs = {};
     PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
   }
-  var swarmEngs = null;
-  if (swarmF) {
-    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
-    if (swarmPerson) { swarmEngs = {}; descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n]=true; }); }
-  }
-  var mgrEngs = null;
-  if (mgrF) {
-    var mgrPerson = PEOPLE.filter(function(p){ return p.name === mgrF; })[0];
-    if (mgrPerson) { mgrEngs = {}; descNames(mgrPerson.id).forEach(function(n){ mgrEngs[n]=true; }); }
+  var leadEngs = null;
+  if (leadF) {
+    var leadPerson = PEOPLE.filter(function(p){ return p.name === leadF; })[0];
+    if (leadPerson) { leadEngs = {}; descNames(leadPerson.id).forEach(function(n){ leadEngs[n]=true; }); }
   }
 
   return KA.filter(function(k) {
-    if (scope     && scope.indexOf(k.author) === -1)     return false;
-    if (podEngs   && !podEngs[k.author])                 return false;
-    if (swarmEngs && !swarmEngs[k.author])               return false;
-    if (mgrEngs   && !mgrEngs[k.author])                 return false;
-    if (engF      && k.author !== engF)                  return false;
+    if (scope    && scope.indexOf(k.author) === -1)  return false;
+    if (podEngs  && !podEngs[k.author])              return false;
+    if (leadEngs && !leadEngs[k.author])             return false;
+    if (engF     && k.author !== engF)               return false;
     return true;
   });
 }
@@ -1219,8 +1211,7 @@ document.getElementById('btnReset').addEventListener('click', function(){
   document.getElementById('fKA').value='';
   document.getElementById('fTopic').value='';
   document.getElementById('fPod').value='';
-  document.getElementById('fSwarm').value='';
-  document.getElementById('fManager').value='';
+  document.getElementById('fLead').value='';
   document.getElementById('fEngineer').value='';
   clearSelection();
 });
@@ -1234,7 +1225,7 @@ document.getElementById('btnCollapse').addEventListener('click', function(){
 });
 document.getElementById('ctxClear').addEventListener('click', clearSelection);
 document.getElementById('tSearch').addEventListener('input', renderTree);
-['fSearch','fKA','fTopic','fPod','fSwarm','fManager','fEngineer'].forEach(function(id){
+['fSearch','fKA','fTopic','fPod','fLead','fEngineer'].forEach(function(id){
   document.getElementById(id).addEventListener('input', renderAll);
   document.getElementById(id).addEventListener('change', renderAll);
 });
