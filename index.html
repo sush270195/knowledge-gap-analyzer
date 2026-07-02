@@ -1092,28 +1092,94 @@ function renderAll() {
   renderHier();
 }
 
-// Load live engineer data from data.json
-fetch('data.json')
-  .then(function(r){ return r.json(); })
-  .then(function(data) {
-    var engSel = document.getElementById('fEngineer');
-    var names = Object.values(data.engineers || {})
-      .map(function(e){ return e.name; })
-      .filter(Boolean)
-      .sort(function(a,b){ return a.localeCompare(b); });
-    names.forEach(function(name) {
-      var o = document.createElement('option'); o.value = name; o.textContent = name; engSel.appendChild(o);
-    });
-  })
-  .catch(function() {
-    // fallback to PEOPLE array if data.json unavailable
-    var engSel = document.getElementById('fEngineer');
-    PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('support engineer') !== -1; })
-      .sort(function(a,b){ return a.name.localeCompare(b.name); })
-      .forEach(function(p){
-        var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; engSel.appendChild(o);
-      });
+// Engineer filter – hardcoded list from OrgCS
+var ENG_NAMES = [
+  "Abdul Muqeeth Mohammed","Abdul Rahman","Abhinav Kumar","Abhinav Singh","Abhishek B",
+  "Abhishek Rajput","Aditya Kulkarni","Aditya Mishra","Aditya Singh IST","Aishwarya Murmu",
+  "Ajith Anand","Akash Kumar","Akash Makker","Akhila Bodi","Akhila Kaparthi",
+  "Akrity Kumari","Aksh Kadia","Akshay Srivastava","Alamelu Arumugam","Aman Lalwani",
+  "Ameem Zama Mohammad","Amit Daga","Amit Verma","Amith T G","Anant Singh",
+  "Anil Maharana","Anju Udayakumar","Ankita Thakur","Ankur Mishra","Annanya Jha",
+  "Anshit Bhargava","Ansuman Kar","Anu Varghese","Anudeep Gopagoni","Anupkumar Ankalwar",
+  "Anurikt Wadhwa","Architha S","Arsha Sharma","Ashish Shrivastav","Ashish Vyas",
+  "Ashitha Srungavarapu","Ashok Rage","Ashutosh Hore","Ashwini Dubey","Atul Pawar",
+  "Atul Tyagi","Avantika Vidyarthi","Avirup Dasgupta","Ayeshea Lyngdoh","Ayush Sasspal",
+  "Ayushi Ghosh","Ayushi Parmar","Aziz Sheikh","Balachandra Maha Samudam","Balaji Thakur",
+  "Bhagya Laxmi Panyam","Bhaskar Choubey","Bhavana Paparapatti","Bhavani Konderu",
+  "Bhushan Mhala","Bhuvana Advaithi Malli","Chaitanya Kumar Bansetti","Chaitanya Sable",
+  "Chandra Bhanu Shukla","Chandu Nagulamilli","Charan Kumar Suguri","Chinmayee Sahoo",
+  "Darshan R A","Deep Sanghani","Deepak Hatwar","Deepak Kumar Mallela","Deepthy John",
+  "Dev Priya Pandey","Dipanjan Saha","Divya Raghavan","Durfshan Wani",
+  "Durga Krishnaveni Bavanari","Durga Venkata Sai Sudhabathula","Eswar Sai Poola",
+  "Ganesh Ramavath","Gaurav Jaiswal","Giripranesh Murali","Granthana Gowda","Guddu Kumar",
+  "Hardik Saxena","Hari Jitray Surya S","Hariharan M","Harika Koneti","Harika Kotha",
+  "Harika Mopada","Harika Pikkili","Harish Alla","Haritha Rachuri",
+  "Harsha Vardhan Yarlagadda","Harshad Bogawat","Harshith Pasumarthi",
+  "Himanshu Kumar Sinha","Himanshu Shekhar","Hiranmayai Nemani","Hrushi Anirudh Ayyagari",
+  "Isha Gupta (Sales Signature)","Issac Ananda Pal C","Jafar Habibi Kadri",
+  "Jagadish Chithrala","Jahnavi Lukka","Jaipal Reddy Patlolla","Jasmeet Saluja",
+  "Jitender Kumar","Jyoti Kumari","Karan Bilakhiya","Kasi Jangiti","Kavita .",
+  "Keerthi Chandrika Pavalla","Keerthi Vissamsetty","Khan Anas Rehmani",
+  "Kishore Goud Gundaram","Kotte Amruta Lakshmi","Kousik Perneni",
+  "Krishna Chaitanya Naraharisetti","Krishna Davuluri","Kritagya Sharma",
+  "Krithika Reddy K","Kunal Shelar","Lakshman Katuri","Lakshmi Reddy Mula",
+  "Lavanya kumari Marri","Likhilswamy Thota","Lily Mishra","Madhu Babu Krovvidi",
+  "Madhu Elipe","Mahender Bachali","Mamatha Panjala","Manasa Devi Velugula",
+  "Manasa Madam","Manchireddy Ananthalaxmi Reddy","Mandar Joshi","Manisha Saini",
+  "Manogna Samayamantula","Mansi Mandhare","Mastanaiah Vinnakota","Mathews Abraham",
+  "Mayank Gairola","Mayur Rohra","Md Athar","Mohamed Javith K","Mohammad Tazeem Khan",
+  "Mohammad Yusuf Idrisi","Monika Kunwar Shaktawat","Mudit Mathur",
+  "Mukesh Sai Varma Mudunuri","Mukul Chandok","Muthubalaji Karuppasamy",
+  "Naga Ajay Kumar D P","Naga Krishnaveni Varaha Lakshmi Achanta","Nagarjuna Guraja",
+  "Nagaveni Kambar","Naincy Kamthan","Naren Penmetsa","Nayana .","Neha Upwanshi",
+  "Nidhi Sheet","Nikhil Khandelwal","Nikita Vernekar","Nirmala Botchu",
+  "Nishat Salam Shaikh","Noopur Kawale","Pallavi Gawande","Pankaj Kumar Dasgupta",
+  "Parameswar Sunkesula","Paras Ahuja","Parichay Khurana","Pooja Bante","Pooja Borkar",
+  "Pooja R","Poonam Jadhav","Prabhu Teja Yellamelli","Pradyumn Sharma","Pramodh Korivi",
+  "Pranav Tatikonda","Pranay Kumar Paka","Prashanti Chavali","Pratiek Deshmukkh",
+  "Pratik Babar","Pratik Jadhav","Praveen Kumar Sivala","Priya Chowdary Vemsani",
+  "Priya Dharshini M","Priya Ranjan","Priyadarshini SR","Priyanka Mukherjee",
+  "Priyanka Polam","Pushpa Devaraj","Raamdivya B","Rachana Miriyala",
+  "Rachitha Donkeshwaram","Rahul Pawar","Raj Kumar Akoju","Rajneesh Pal",
+  "Rakesh Gulivindala","Rakshith Karthikeya Kadari","Rama Sravya Upadhyayula",
+  "Ramakrishna Putta","Ramani Bamane","Ramasubbaiah Dasari","Ranjitha KM","Ranju Rajan",
+  "Rasagna Akuthota","Ravali Bobba","Ravi Ritesh Kumar","Ravi Sourav","Rehan Khan",
+  "Remya Krishnan","Rohan Kamble","Ruchika Gupta","Rupesh Jha","Rushikesh Bidve",
+  "S Chetan Kumar","Sachin Kumar Naidi","Sachin Suresh Bhakare","Sagar Dixit",
+  "Sahithi Gayam","Sai Anish Sidhireddy","Sai Chand Surepally","Sai Charith Nagubandi",
+  "Sai Kiran Enugurthi","Sai Kumar Raju Muddaluri","Sai Kumar Veeramalla",
+  "Sai Praveen Kumar Kakkirala","Sai Saraschandra Gudipati","Sai Shashank Banala",
+  "Sai Sri Ganapathineedi","Sai Suman Balusu","Saicharan Reddy Kasireddy",
+  "Saikumar Alapati","Saitejasakesh Sadineni","Saksham Shah","Sakshi Nigam",
+  "Saloni Tiwari","Sameem Sarkar","Sampriti Dutta","Sangeetha Y","Sanghamitra Rajkhowa",
+  "Sanjay Borkar","Sanjeev Kumar Singh","Sanket Kine","Sanskruti Hembade",
+  "Santhosh Kumar Durgasi","Saravan Bhetanabhotla","Sarika Thatikonda",
+  "Sasidhar Kanuganti","Sasidhar Reddy","Satakshi Banik","Saurabh Kumar","Seema Bidare",
+  "Shaan Anshu","Shaik Afrid","Shaik Rafi","Shaik Rajiya Begum","Shajidha Shaik",
+  "Shakti Singh","Shantanu Mishra","Sharanya .","Shashwat Vairale","Shikha Tripathi",
+  "Shivam Mishra","Shivam Sharma","Shivam Singh","Shivanshu Tiwari","Shravan Burra",
+  "Shreya Chatterjee","Shyamal Kumar","Simardeep Bindra","Siva Dornala","Sneha Gupta",
+  "Sonali Suriyanarayanan","Soumitra Sabnis","Sourabh More","Sparshi Agrawal",
+  "Sravan Kumar Kathala","Sravani Damacharla","Sravankumar Tangudu",
+  "Sreekantha Reddy K","Sri Nagalaxmi Anika","Srinivas Vikas Kalidindi","Srishti Suman",
+  "Sruti Aich","Subhadip Chatterjee","Subhasweta Behera","Suman Kumar Pramanik",
+  "Sumasree Madichedu","Sunil Dalawai","Supriya Vunnava","Suraj Dewangan",
+  "Surya Moulika Uppalapati","Surya Prakash Sakthivel","Suryateja Birudukota",
+  "Sushma Bhavani Lagisetty","Sushma Ediga","Sushmita Srivastava","Sushmitha K R",
+  "Swati Devsoth","Swati Gupta","Syeda Saba Siddiqua","Tanuj Arora","Tariq Anwar",
+  "Tejaswi Naidu Kurra","Tejaswinee Khot","Tushar Jain","Uma Datta Sesha Sai Vedantam",
+  "Vaitheeshwari E","Varshitha Pasunuri","Venkat Reddy Marivina","Venkata Polisetti",
+  "Vidya Patil","Vidyabai Pawar","Vignesh Paranthaman","Vijay Kumar U C","Vikram Singh",
+  "Vinay Poka","Vinayak Tamhankar","Vinisha R","Vinod kumar Nadimpalli",
+  "Vivek Pai Baidebettu","Yadhu Nandan Karumanchi","Yagya Ram Verma","Yaswant Bommi",
+  "Yathish V","Yogesh Kumar Lal","Yogesh Sundararaman","Yojana Gajavelli"
+];
+(function() {
+  var engSel = document.getElementById('fEngineer');
+  ENG_NAMES.slice().sort(function(a,b){ return a.localeCompare(b); }).forEach(function(name) {
+    var o = document.createElement('option'); o.value = name; o.textContent = name; engSel.appendChild(o);
   });
+})();
 
 renderAll();
 </script>
