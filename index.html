@@ -131,8 +131,6 @@ tr:hover td{background:#f5f8fc;}
   </select>
   <label>Topic</label>
   <select id="fTopic"><option value="">All Topics</option></select>
-  <label>Pod</label>
-  <select id="fPod"><option value="">All Pods</option></select>
   <label>Lead / Manager</label>
   <select id="fLead"><option value="">All Leads &amp; Managers</option></select>
   <label>Engineer</label>
@@ -662,6 +660,21 @@ function descNames(id) {
 }
 
 // ============================================================
+// LEAD / MANAGER ALLOWLISTS (module-level for reuse)
+// ============================================================
+var SWARM_LEADS = [
+  "Anant Singh","Anudeep Gopagoni","Durga Venkata Sai Sudhabathula",
+  "Jasmeet Singh Saluja","Khan Anas Rehmani","Ravi Sourav","Saloni Tiwari",
+  "Shakti Singh","Simardeep Bindra","Suraj Dewangan","Sushmita Srivastava",
+  "Vinay Poka","Vinod Kumar Nadimpalli"
+];
+var MANAGERS = [
+  "Amit Daga","Amit Verma","Anil Maharana","Ankur Mishra","Anurikt Wadhwa",
+  "Deep Sanghani","Mathews Abraham","Mayank Gairola","Mayur Rohra",
+  "Mudit Mathur","Priyanka Mukherjee","Pushpa Devaraj","Remya Krishnan"
+];
+
+// ============================================================
 // POPULATE FILTER DROPDOWNS
 // ============================================================
 (function() {
@@ -671,26 +684,7 @@ function descNames(id) {
     var o = document.createElement('option'); o.value = t; o.textContent = t; tSel.appendChild(o);
   });
 
-  var pods = [];
-  PEOPLE.forEach(function(p) { if (pods.indexOf(p.pod) === -1) pods.push(p.pod); });
-  pods.sort();
-  var pSel = document.getElementById('fPod');
-  pods.forEach(function(pod) {
-    var o = document.createElement('option'); o.value = pod; o.textContent = pod; pSel.appendChild(o);
-  });
-
-  // Combined Lead / Manager filter – hardcoded allowlists
-  var SWARM_LEADS = [
-    "Anant Singh","Anudeep Gopagoni","Durga Venkata Sai Sudhabathula",
-    "Jasmeet Singh Saluja","Khan Anas Rehmani","Ravi Sourav","Saloni Tiwari",
-    "Shakti Singh","Simardeep Bindra","Suraj Dewangan","Sushmita Srivastava",
-    "Vinay Poka","Vinod Kumar Nadimpalli"
-  ];
-  var MANAGERS = [
-    "Amit Daga","Amit Verma","Anil Maharana","Ankur Mishra","Anurikt Wadhwa",
-    "Deep Sanghani","Mathews Abraham","Mayank Gairola","Mayur Rohra",
-    "Mudit Mathur","Priyanka Mukherjee","Pushpa Devaraj","Remya Krishnan"
-  ];
+  // Combined Lead / Manager filter – uses module-level allowlists
   var leadSel = document.getElementById('fLead');
   var optSL = document.createElement('optgroup'); optSL.label = '── Swarm Leads ──';
   SWARM_LEADS.slice().sort().forEach(function(name){
@@ -718,16 +712,8 @@ function filteredCases() {
   var search   = (document.getElementById('fSearch').value || '').toLowerCase();
   var kaF      = document.getElementById('fKA').value;
   var topicF   = document.getElementById('fTopic').value;
-  var podF     = document.getElementById('fPod').value;
   var leadF    = document.getElementById('fLead').value;
   var engF     = document.getElementById('fEngineer').value;
-
-  // pod → set of names
-  var podEngs = null;
-  if (podF) {
-    podEngs = {};
-    PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
-  }
 
   // lead/manager → set of descendant names
   var leadEngs = null;
@@ -740,7 +726,6 @@ function filteredCases() {
   }
 
   return CASES.filter(function(c) {
-    if (podEngs  && !podEngs[c.owner]   && !podEngs[c.manager])   return false;
     if (leadEngs && !leadEngs[c.owner]  && !leadEngs[c.manager])  return false;
     if (engF     && c.owner !== engF)                              return false;
     if (search && c.subject.toLowerCase().indexOf(search) === -1 && c.owner.toLowerCase().indexOf(search) === -1) return false;
@@ -751,15 +736,9 @@ function filteredCases() {
 }
 
 function filteredKA() {
-  var podF    = document.getElementById('fPod').value;
   var leadF   = document.getElementById('fLead').value;
   var engF    = document.getElementById('fEngineer').value;
 
-  var podEngs = null;
-  if (podF) {
-    podEngs = {};
-    PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
-  }
   var leadEngs = null;
   if (leadF) {
     var leadPerson = PEOPLE.filter(function(p){ return p.name === leadF; })[0];
@@ -767,7 +746,6 @@ function filteredKA() {
   }
 
   return KA.filter(function(k) {
-    if (podEngs  && !podEngs[k.author])              return false;
     if (leadEngs && !leadEngs[k.author])             return false;
     if (engF     && k.author !== engF)               return false;
     return true;
@@ -1070,12 +1048,11 @@ document.getElementById('btnReset').addEventListener('click', function(){
   document.getElementById('fSearch').value='';
   document.getElementById('fKA').value='';
   document.getElementById('fTopic').value='';
-  document.getElementById('fPod').value='';
   document.getElementById('fLead').value='';
   document.getElementById('fEngineer').value='';
   renderAll();
 });
-['fSearch','fKA','fTopic','fPod','fLead','fEngineer'].forEach(function(id){
+['fSearch','fKA','fTopic','fLead','fEngineer'].forEach(function(id){
   document.getElementById(id).addEventListener('input', renderAll);
   document.getElementById(id).addEventListener('change', renderAll);
 });
@@ -1175,10 +1152,15 @@ var ENG_NAMES = [
   "Yathish V","Yogesh Kumar Lal","Yogesh Sundararaman","Yojana Gajavelli"
 ];
 (function() {
+  var exclude = {};
+  SWARM_LEADS.forEach(function(n){ exclude[n]=true; });
+  MANAGERS.forEach(function(n){ exclude[n]=true; });
   var engSel = document.getElementById('fEngineer');
-  ENG_NAMES.slice().sort(function(a,b){ return a.localeCompare(b); }).forEach(function(name) {
-    var o = document.createElement('option'); o.value = name; o.textContent = name; engSel.appendChild(o);
-  });
+  ENG_NAMES.filter(function(n){ return !exclude[n]; })
+    .sort(function(a,b){ return a.localeCompare(b); })
+    .forEach(function(name) {
+      var o = document.createElement('option'); o.value = name; o.textContent = name; engSel.appendChild(o);
+    });
 })();
 
 renderAll();
