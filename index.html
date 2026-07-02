@@ -35,42 +35,17 @@ body{font-family:'Salesforce Sans',Arial,sans-serif;background:var(--bg);color:v
 /* LAYOUT */
 .body{display:flex;flex:1;overflow:hidden;}
 
-/* LEFT HIERARCHY PANEL */
-.lp{width:270px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.lp-hdr{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;}
-.lp-hdr h3{font-size:.82rem;font-weight:700;flex:1;}
-.lp-hdr span{font-size:.62rem;color:var(--muted);}
-.lp-search{padding:6px 8px;border-bottom:1px solid var(--border);}
-.lp-search input{width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:.75rem;}
-.tree-scroll{overflow-y:auto;flex:1;padding:4px 2px;}
-
-/* TREE NODES */
-.tn{margin:1px 0;}
-.tr{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;cursor:pointer;transition:background .1s;}
-.tr:hover{background:#f0f5ff;}
-.tr.selected{background:var(--light);border-left:3px solid var(--brand);padding-left:3px;}
-.ttog{width:13px;font-size:.58rem;color:var(--muted);text-align:center;flex-shrink:0;}
-.tav{width:21px;height:21px;border-radius:50%;background:var(--light);color:var(--dark);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;flex-shrink:0;}
-.tav.on{background:var(--brand);color:#fff;}
-.tname{font-size:.76rem;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.tbadge{font-size:.58rem;border-radius:8px;padding:1px 5px;white-space:nowrap;flex-shrink:0;}
-.tc{margin-left:18px;border-left:2px solid #e5e9f2;padding-left:4px;display:none;}
-.tc.open{display:block;}
-
 /* role badge colors */
 .rd{background:#d8edff;color:#014486;}
 .rsm{background:#f3ebff;color:#6a14d4;}
 .rm{background:#eaf5ea;color:#1a6d2a;}
 .rs{background:#fff0d9;color:#9a5300;}
 .re{background:#f0f0f0;color:#444;}
+.tbadge{font-size:.58rem;border-radius:8px;padding:1px 5px;white-space:nowrap;flex-shrink:0;}
 
 /* RIGHT PANEL */
 .rp{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
 
-/* CONTEXT BANNER */
-.ctx{display:none;background:var(--light);border-bottom:1px solid var(--brand);padding:7px 16px;font-size:.78rem;align-items:center;gap:8px;flex-shrink:0;}
-.ctx strong{color:var(--dark);}
-.ctx-clear{margin-left:auto;cursor:pointer;color:var(--brand);font-weight:700;font-size:.75rem;}
 
 /* KPI STRIP */
 .krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;padding:12px 16px;flex-shrink:0;}
@@ -124,8 +99,7 @@ tr:hover td{background:#f5f8fc;}
 .legend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 13px;border-top:1px solid var(--border);background:#fafafa;}
 .li{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--muted);}
 
-@media(max-width:860px){.crow{grid-template-columns:1fr;}.lp{width:220px;}}
-@media(max-width:620px){.body{flex-direction:column;}.lp{width:100%;height:180px;border-right:none;border-bottom:1px solid var(--border);}}
+@media(max-width:860px){.crow{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -164,32 +138,11 @@ tr:hover td{background:#f5f8fc;}
   <label>Engineer</label>
   <select id="fEngineer"><option value="">All Engineers</option></select>
   <button class="fbtn ml" id="btnReset">Reset All</button>
-  <button class="fbtn primary" id="btnExpand">Expand Tree</button>
-  <button class="fbtn" id="btnCollapse">Collapse Tree</button>
 </div>
 
 <div class="body">
 
-  <!-- LEFT: HIERARCHY TREE -->
-  <div class="lp">
-    <div class="lp-hdr">
-      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="3.5" r="2.2" stroke="#0176d3" stroke-width="1.3"/><path d="M1.5 11.5c0-2.485 2.239-4.5 5-4.5s5 2.015 5 4.5" stroke="#0176d3" stroke-width="1.3" stroke-linecap="round"/></svg>
-      <h3>Krishna Org Hierarchy</h3>
-      <span>click to filter</span>
-    </div>
-    <div class="lp-search"><input type="text" id="tSearch" placeholder="Search people..."/></div>
-    <div class="tree-scroll" id="treeRoot"></div>
-  </div>
-
-  <!-- RIGHT: DASHBOARD -->
   <div class="rp">
-
-    <!-- CONTEXT BANNER -->
-    <div class="ctx" id="ctxBanner">
-      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="3.5" r="2.2" stroke="#0176d3" stroke-width="1.3"/><path d="M1.5 11.5c0-2.485 2.239-4.5 5-4.5s5 2.015 5 4.5" stroke="#0176d3" stroke-width="1.3" stroke-linecap="round"/></svg>
-      <span>Filtered by: <strong id="ctxName"></strong> &nbsp;<em id="ctxSub" style="color:var(--muted);font-size:.72rem;"></em></span>
-      <span class="ctx-clear" id="ctxClear">✕ Clear</span>
-    </div>
 
     <!-- KPI STRIP -->
     <div class="krow">
@@ -759,17 +712,9 @@ function descNames(id) {
 // ============================================================
 // STATE
 // ============================================================
-var selectedId = null;
 var charts = {};
 
-function getScope() {
-  // returns array of engineer names in scope, or null for all
-  if (!selectedId) return null;
-  return descNames(selectedId);
-}
-
 function filteredCases() {
-  var scope    = getScope();
   var search   = (document.getElementById('fSearch').value || '').toLowerCase();
   var kaF      = document.getElementById('fKA').value;
   var topicF   = document.getElementById('fTopic').value;
@@ -795,7 +740,6 @@ function filteredCases() {
   }
 
   return CASES.filter(function(c) {
-    if (scope    && scope.indexOf(c.owner) === -1 && scope.indexOf(c.manager) === -1) return false;
     if (podEngs  && !podEngs[c.owner]   && !podEngs[c.manager])   return false;
     if (leadEngs && !leadEngs[c.owner]  && !leadEngs[c.manager])  return false;
     if (engF     && c.owner !== engF)                              return false;
@@ -807,7 +751,6 @@ function filteredCases() {
 }
 
 function filteredKA() {
-  var scope   = getScope();
   var podF    = document.getElementById('fPod').value;
   var leadF   = document.getElementById('fLead').value;
   var engF    = document.getElementById('fEngineer').value;
@@ -824,7 +767,6 @@ function filteredKA() {
   }
 
   return KA.filter(function(k) {
-    if (scope    && scope.indexOf(k.author) === -1)  return false;
     if (podEngs  && !podEngs[k.author])              return false;
     if (leadEngs && !leadEngs[k.author])             return false;
     if (engF     && k.author !== engF)               return false;
@@ -835,86 +777,6 @@ function filteredKA() {
 // ============================================================
 // TREE RENDER
 // ============================================================
-function buildNode(id, depth) {
-  var p = byId[id]; if (!p) return null;
-  var q = (document.getElementById('tSearch').value || '').toLowerCase();
-  var kids = children[id] || [];
-
-  var nameMatch = !q || p.name.toLowerCase().indexOf(q) !== -1 || p.title.toLowerCase().indexOf(q) !== -1;
-  var descMatch = false;
-  if (!nameMatch && q) {
-    descNames(id).forEach(function(n) { if (n.toLowerCase().indexOf(q) !== -1) descMatch = true; });
-  }
-  if (q && !nameMatch && !descMatch) return null;
-
-  var node = document.createElement('div'); node.className = 'tn';
-  var row  = document.createElement('div'); row.className  = 'tr';
-  if (selectedId === id) row.classList.add('selected');
-
-  var tog = document.createElement('div'); tog.className = 'ttog';
-  tog.textContent = kids.length ? (depth < 2 ? '▼' : '▶') : '·';
-  row.appendChild(tog);
-
-  var av = document.createElement('div');
-  av.className = 'tav' + (selectedId === id ? ' on' : '');
-  av.textContent = p.name.split(' ').slice(0,2).map(function(w){return w[0];}).join('');
-  row.appendChild(av);
-
-  var nm = document.createElement('div'); nm.className = 'tname'; nm.textContent = p.name;
-  row.appendChild(nm);
-
-  var rb = document.createElement('span');
-  rb.className = 'tbadge ' + roleClass(p.title);
-  rb.textContent = shortRole(p.title);
-  row.appendChild(rb);
-
-  node.appendChild(row);
-
-  var wrap = document.createElement('div');
-  wrap.className = 'tc' + (depth < 2 ? ' open' : '');
-  kids.forEach(function(kid) { var cn = buildNode(kid, depth + 1); if (cn) wrap.appendChild(cn); });
-  node.appendChild(wrap);
-
-  row.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (kids.length) {
-      var open = wrap.classList.contains('open');
-      wrap.classList.toggle('open');
-      tog.textContent = open ? '▶' : '▼';
-    }
-    if (selectedId === id) {
-      clearSelection();
-    } else {
-      selectNode(id);
-    }
-  });
-  return node;
-}
-
-function renderTree() {
-  var root = document.getElementById('treeRoot');
-  while (root.firstChild) root.removeChild(root.firstChild);
-  var node = buildNode('KDV', 0);
-  if (node) root.appendChild(node);
-}
-
-function selectNode(id) {
-  selectedId = id;
-  var p = byId[id];
-  var banner = document.getElementById('ctxBanner');
-  banner.style.display = 'flex';
-  document.getElementById('ctxName').textContent = p.name;
-  document.getElementById('ctxSub').textContent  = '(' + shortRole(p.title) + ') — ' + descNames(id).length + ' people in scope';
-  renderTree();
-  renderAll();
-}
-
-function clearSelection() {
-  selectedId = null;
-  document.getElementById('ctxBanner').style.display = 'none';
-  renderTree();
-  renderAll();
-}
 
 // ============================================================
 // KPI
@@ -1144,7 +1006,7 @@ function renderHier() {
   CASES.forEach(function(c){ cMap[c.owner]=(cMap[c.owner]||0)+1; });
   KA.forEach(function(k){ kMap[k.author]=(kMap[k.author]||0)+1; });
 
-  var scope = selectedId ? descendants(selectedId) : PEOPLE.map(function(p){return p.id;});
+  var scope = PEOPLE.map(function(p){return p.id;});
   var body = document.getElementById('bHier');
   while (body.firstChild) body.removeChild(body.firstChild);
 
@@ -1157,12 +1019,10 @@ function renderHier() {
 
     // Name (clickable → selects in tree)
     var t0=document.createElement('td');
-    t0.style.cursor='pointer'; t0.title='Click to filter by '+p.name;
     var av=document.createElement('span'); av.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--light);color:var(--dark);font-size:.56rem;font-weight:700;margin-right:5px;flex-shrink:0;vertical-align:middle;';
     av.textContent=p.name.split(' ').slice(0,2).map(function(w){return w[0];}).join('');
     var nm=document.createElement('strong'); nm.textContent=p.name;
     t0.appendChild(av); t0.appendChild(nm);
-    t0.addEventListener('click', function(){selectNode(id);});
     tr.appendChild(t0);
 
     var t1=document.createElement('td');
@@ -1213,18 +1073,8 @@ document.getElementById('btnReset').addEventListener('click', function(){
   document.getElementById('fPod').value='';
   document.getElementById('fLead').value='';
   document.getElementById('fEngineer').value='';
-  clearSelection();
+  renderAll();
 });
-document.getElementById('btnExpand').addEventListener('click', function(){
-  document.querySelectorAll('.tc').forEach(function(e){e.classList.add('open');});
-  document.querySelectorAll('.ttog').forEach(function(e){if(e.textContent==='▶') e.textContent='▼';});
-});
-document.getElementById('btnCollapse').addEventListener('click', function(){
-  document.querySelectorAll('.tc').forEach(function(e){e.classList.remove('open');});
-  document.querySelectorAll('.ttog').forEach(function(e){if(e.textContent==='▼') e.textContent='▶';});
-});
-document.getElementById('ctxClear').addEventListener('click', clearSelection);
-document.getElementById('tSearch').addEventListener('input', renderTree);
 ['fSearch','fKA','fTopic','fPod','fLead','fEngineer'].forEach(function(id){
   document.getElementById(id).addEventListener('input', renderAll);
   document.getElementById(id).addEventListener('change', renderAll);
@@ -1265,7 +1115,6 @@ fetch('data.json')
       });
   });
 
-renderTree();
 renderAll();
 </script>
 </body>
