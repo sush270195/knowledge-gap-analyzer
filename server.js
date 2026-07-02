@@ -1,34 +1,81 @@
-const http = require('http');
-const { execFileSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+const http  = require('http');
+const https = require('https');
+const fs    = require('fs');
+const path  = require('path');
 
-const PORT = process.env.PORT || 3000;
-const REFRESH_MS = 30 * 60 * 1000; // 30 minutes
+const PORT       = process.env.PORT       || 3000;
+const TOKEN      = process.env.SF_ACCESS_TOKEN;
+const INSTANCE   = (process.env.SF_INSTANCE_URL || 'https://orgcs.my.salesforce.com').replace(/\/$/, '');
+const API_VER    = process.env.SF_API_VERSION || 'v61.0';
+const REFRESH_MS = 30 * 60 * 1000;
 
-let cache = null;
+let cache       = null;
 let lastFetched = null;
 
-// ─── SOQL helpers ────────────────────────────────────────────────────────────
+// ─── REST API helpers ─────────────────────────────────────────────────────────
 
-function sfQuery(soql) {
-  const result = execFileSync(
-    'sf',
-    ['data', 'query', '--query', soql, '--json'],
-    { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
-  );
-  const parsed = JSON.parse(result);
-  if (parsed.status !== 0) throw new Error('SOQL failed: ' + JSON.stringify(parsed));
-  return parsed.result.records || [];
+function sfRestQuery(soql) {
+  if (!TOKEN) {
+    throw new Error(
+      'SF_ACCESS_TOKEN env var is not set. ' +
+      'Open https://orgcs.my.salesforce.com in your browser, open DevTools → Console, ' +
+      'and run: copy(document.cookie) or run window.sforce.one.navigateToURL — see README for exact steps.'
+    );
+  }
+
+  return new Promise(function(resolve, reject) {
+    var records = [];
+
+    function fetchPage(urlPath) {
+      var options = {
+        hostname: INSTANCE.replace('https://', '').replace('http://', ''),
+        path:     urlPath,
+        method:   'GET',
+        headers:  {
+          'Authorization': 'Bearer ' + TOKEN,
+          'Content-Type':  'application/json'
+        }
+      };
+
+      var req = https.request(options, function(res) {
+        var body = '';
+        res.on('data', function(chunk) { body += chunk; });
+        res.on('end', function() {
+          if (res.statusCode === 401) {
+            return reject(new Error('SF_ACCESS_TOKEN is expired or invalid. Please refresh it.'));
+          }
+          if (res.statusCode !== 200) {
+            return reject(new Error('SOQL HTTP ' + res.statusCode + ': ' + body.slice(0, 300)));
+          }
+          var parsed;
+          try { parsed = JSON.parse(body); }
+          catch (e) { return reject(new Error('JSON parse error: ' + e.message)); }
+
+          records = records.concat(parsed.records || []);
+
+          if (parsed.nextRecordsUrl) {
+            fetchPage(parsed.nextRecordsUrl);
+          } else {
+            resolve(records);
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.end();
+    }
+
+    var encoded = encodeURIComponent(soql);
+    fetchPage('/services/data/' + API_VER + '/query?q=' + encoded);
+  });
 }
 
 // ─── DATA FETCH ───────────────────────────────────────────────────────────────
 
-function fetchLiveData() {
-  console.log('[sync] Fetching live data from OrgCS...');
+async function fetchLiveData() {
+  console.log('[sync] Fetching live data from OrgCS REST API...');
 
-  // Cases: last 30 days, scoped to active owners with taxonomy
-  const caseRecords = sfQuery(
+  const caseRecords = await sfRestQuery(
     'SELECT CaseNumber, Subject, Owner.Name, CaseReportingTaxonomy__r.Name, Status, Priority, CreatedDate ' +
     'FROM Case ' +
     'WHERE CreatedDate = LAST_N_DAYS:30 ' +
@@ -42,21 +89,20 @@ function fetchLiveData() {
     return {
       num:     r.CaseNumber,
       subject: r.Subject || '',
-      owner:   r.Owner ? r.Owner.Name : '',
+      owner:   r.Owner   ? r.Owner.Name : '',
       topic:   r.CaseReportingTaxonomy__r ? r.CaseReportingTaxonomy__r.Name : '',
-      status:  r.Status || '',
+      status:  r.Status    || '',
       created: r.CreatedDate || ''
     };
   });
 
-  // KA articles created in last 30 days
-  const kaRecords = sfQuery(
-    'SELECT ArticleNumber, Title, CreatedBy.Name, CreatedDate ' +
-    'FROM KnowledgeArticleVersion ' +
-    'WHERE PublishStatus = \'Online\' ' +
-    'AND CreatedDate = LAST_N_DAYS:30 ' +
-    'ORDER BY CreatedDate DESC ' +
-    'LIMIT 5000'
+  const kaRecords = await sfRestQuery(
+    "SELECT ArticleNumber, Title, CreatedBy.Name, CreatedDate " +
+    "FROM KnowledgeArticleVersion " +
+    "WHERE PublishStatus = 'Online' " +
+    "AND CreatedDate = LAST_N_DAYS:30 " +
+    "ORDER BY CreatedDate DESC " +
+    "LIMIT 5000"
   );
 
   const ka = kaRecords.map(function(r) {
@@ -71,7 +117,7 @@ function fetchLiveData() {
   cache = {
     generatedAt: new Date().toISOString(),
     cases: cases,
-    ka: ka
+    ka:    ka
   };
   lastFetched = Date.now();
 
@@ -97,21 +143,35 @@ const server = http.createServer(function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   if (req.url === '/api/data') {
-    const data = cache || fetchLiveData();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(data));
+    const data = cache;
+    if (data) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+    } else {
+      // No cache yet — fetch now
+      fetchLiveData()
+        .then(function(d) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(d));
+        })
+        .catch(function(e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        });
+    }
     return;
   }
 
   if (req.url === '/api/refresh') {
-    try {
-      const data = fetchLiveData();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, generatedAt: data.generatedAt, cases: data.cases.length, ka: data.ka.length }));
-    } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, error: e.message }));
-    }
+    fetchLiveData()
+      .then(function(d) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, generatedAt: d.generatedAt, cases: d.cases.length, ka: d.ka.length }));
+      })
+      .catch(function(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      });
     return;
   }
 
@@ -125,19 +185,23 @@ const server = http.createServer(function(req, res) {
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 
-try {
-  fetchLiveData();
-} catch (e) {
-  console.error('[sync] Initial fetch failed:', e.message);
-  cache = { generatedAt: new Date().toISOString(), cases: [], ka: [], error: e.message };
-}
-
-setInterval(function() {
-  try { fetchLiveData(); }
-  catch (e) { console.error('[sync] Refresh failed:', e.message); }
-}, REFRESH_MS);
-
 server.listen(PORT, function() {
   console.log('[server] Listening on http://localhost:' + PORT);
-  console.log('[server] Live data syncs every 30 minutes');
+  if (!TOKEN) {
+    console.warn('[server] WARNING: SF_ACCESS_TOKEN is not set — /api/data will return an error until you set it.');
+    console.warn('[server] Set it with:  SF_ACCESS_TOKEN="00D..." node server.js');
+  } else {
+    console.log('[server] SF_ACCESS_TOKEN found — fetching initial data...');
+    fetchLiveData().catch(function(e) {
+      console.error('[sync] Initial fetch failed:', e.message);
+      cache = { generatedAt: new Date().toISOString(), cases: [], ka: [], error: e.message };
+    });
+  }
 });
+
+setInterval(function() {
+  if (!TOKEN) return;
+  fetchLiveData().catch(function(e) {
+    console.error('[sync] Refresh failed:', e.message);
+  });
+}, REFRESH_MS);
