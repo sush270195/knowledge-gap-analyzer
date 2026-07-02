@@ -187,14 +187,25 @@ const server = http.createServer(function(req, res) {
 
 server.listen(PORT, function() {
   console.log('[server] Listening on http://localhost:' + PORT);
+
+  // Load data.json as initial cache (works even without SF_ACCESS_TOKEN)
+  const dataPath = path.join(__dirname, 'data.json');
+  if (fs.existsSync(dataPath)) {
+    try {
+      cache = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      console.log('[server] Loaded data.json — ' + (cache.cases||[]).length + ' cases, ' + (cache.ka||[]).length + ' KA articles');
+    } catch (e) {
+      console.warn('[server] Could not parse data.json:', e.message);
+    }
+  }
+
   if (!TOKEN) {
-    console.warn('[server] WARNING: SF_ACCESS_TOKEN is not set — /api/data will return an error until you set it.');
+    console.warn('[server] SF_ACCESS_TOKEN not set — serving data.json only (no live sync).');
     console.warn('[server] Set it with:  SF_ACCESS_TOKEN="00D..." node server.js');
   } else {
-    console.log('[server] SF_ACCESS_TOKEN found — fetching initial data...');
+    console.log('[server] SF_ACCESS_TOKEN found — fetching live data...');
     fetchLiveData().catch(function(e) {
       console.error('[sync] Initial fetch failed:', e.message);
-      cache = { generatedAt: new Date().toISOString(), cases: [], ka: [], error: e.message };
     });
   }
 });
