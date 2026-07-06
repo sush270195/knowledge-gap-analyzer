@@ -427,7 +427,9 @@ var KA_MAP = {
 // ============================================================
 // HELPERS
 // ============================================================
-function getTopic(subj) {
+function getTopic(subj, topicField) {
+  // Use pre-classified taxonomy from OrgCS when available
+  if (topicField) return topicField;
   var s = subj.toLowerCase();
   for (var i = 0; i < TOPIC_RULES.length; i++) {
     for (var j = 0; j < TOPIC_RULES[i].kw.length; j++) {
@@ -606,8 +608,8 @@ function filteredCases() {
     if (mgrEngs    && !mgrEngs[c.owner]    && !mgrEngs[c.manager])    return false;
     if (engF       && c.owner !== engF)                                return false;
     if (search && c.subject.toLowerCase().indexOf(search) === -1 && c.owner.toLowerCase().indexOf(search) === -1) return false;
-    if (topicF && getTopic(c.subject) !== topicF) return false;
-    if (kaF) { var k = KA_MAP[getTopic(c.subject)]; if (k && k.s !== kaF) return false; }
+    if (topicF && getTopic(c.subject, c.topic) !== topicF) return false;
+    if (kaF) { var k = KA_MAP[getTopic(c.subject, c.topic)]; if (k && k.s !== kaF) return false; }
     return true;
   });
 }
@@ -734,7 +736,7 @@ function clearSelection() {
 // ============================================================
 function renderKPIs() {
   var fc = filteredCases(), fka = filteredKA();
-  var topics = {}; fc.forEach(function(c) { topics[getTopic(c.subject)] = true; });
+  var topics = {}; fc.forEach(function(c) { topics[getTopic(c.subject, c.topic)] = true; });
   var tl = Object.keys(topics);
   var miss = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'missing'; }).length;
   var part = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'partial'; }).length;
@@ -759,7 +761,7 @@ function renderCharts() {
 
   // Topics bar chart
   var tc = {};
-  fc.forEach(function(c){ var t = getTopic(c.subject); tc[t] = (tc[t]||0)+1; });
+  fc.forEach(function(c){ var t = getTopic(c.subject, c.topic); tc[t] = (tc[t]||0)+1; });
   var te = Object.entries(tc).sort(function(a,b){return b[1]-a[1];}).slice(0,9);
   var tl = te.map(function(e){return e[0];}), td = te.map(function(e){return e[1];});
   var tcols = tl.map(function(l){
@@ -801,7 +803,7 @@ function renderCharts() {
 function renderGap() {
   var fc = filteredCases();
   var td = {};
-  fc.forEach(function(c){ var t=getTopic(c.subject); if(!td[t]) td[t]={count:0,engs:{}}; td[t].count++; td[t].engs[c.owner]=true; });
+  fc.forEach(function(c){ var t=getTopic(c.subject, c.topic); if(!td[t]) td[t]={count:0,engs:{}}; td[t].count++; td[t].engs[c.owner]=true; });
   var rows = Object.entries(td).sort(function(a,b){return b[1].count-a[1].count;});
   var body = document.getElementById('bGap');
   while (body.firstChild) body.removeChild(body.firstChild);
@@ -909,7 +911,7 @@ function renderEng() {
 function renderMgr() {
   var fc = filteredCases(), fka = filteredKA();
   var md = {};
-  fc.forEach(function(c){ if (!md[c.manager]) md[c.manager]={engs:{},cases:0,topics:{}}; md[c.manager].engs[c.owner]=true; md[c.manager].cases++; var t=getTopic(c.subject); md[c.manager].topics[t]=(md[c.manager].topics[t]||0)+1; });
+  fc.forEach(function(c){ if (!md[c.manager]) md[c.manager]={engs:{},cases:0,topics:{}}; md[c.manager].engs[c.owner]=true; md[c.manager].cases++; var t=getTopic(c.subject, c.topic); md[c.manager].topics[t]=(md[c.manager].topics[t]||0)+1; });
   var kae = {};
   fka.forEach(function(k){ kae[k.author]=(kae[k.author]||0)+1; });
   var lvlMap = {};
