@@ -504,6 +504,8 @@ var PEOPLE = [
 // CASES and KA are loaded live from /api/data — see fetchAndRender() below
 var CASES = [];
 var KA = [];
+// swarm lead name → Set of engineer names, populated from data.json people array
+var SWARM_LEAD_MAP = {};
 
 var TOPIC_RULES = [
   {t:"Flow / Process Builder",  kw:["flow","process builder","screen flow","interview","fault path"]},
@@ -673,13 +675,19 @@ function filteredCases() {
   var leadF    = document.getElementById('fLead').value;
   var engF     = document.getElementById('fEngineer').value;
 
-  // lead/manager → set of descendant names
+  // lead/manager → set of engineer names
+  // For swarm leads: use Swarm_Lead__c mapping from OrgCS (SWARM_LEAD_MAP)
+  // For managers: use org tree descendants
   var leadEngs = null;
   if (leadF) {
-    var leadPerson = PEOPLE.filter(function(p){ return p.name === leadF; })[0];
-    if (leadPerson) {
-      leadEngs = {};
-      descNames(leadPerson.id).forEach(function(n){ leadEngs[n] = true; });
+    if (SWARM_LEAD_MAP[leadF]) {
+      leadEngs = SWARM_LEAD_MAP[leadF];
+    } else {
+      var leadPerson = PEOPLE.filter(function(p){ return p.name === leadF; })[0];
+      if (leadPerson) {
+        leadEngs = {};
+        descNames(leadPerson.id).forEach(function(n){ leadEngs[n] = true; });
+      }
     }
   }
 
@@ -699,8 +707,15 @@ function filteredKA() {
 
   var leadEngs = null;
   if (leadF) {
-    var leadPerson = PEOPLE.filter(function(p){ return p.name === leadF; })[0];
-    if (leadPerson) { leadEngs = {}; descNames(leadPerson.id).forEach(function(n){ leadEngs[n]=true; }); }
+    if (SWARM_LEAD_MAP[leadF]) {
+      leadEngs = SWARM_LEAD_MAP[leadF];
+    } else {
+      var leadPerson2 = PEOPLE.filter(function(p){ return p.name === leadF; })[0];
+      if (leadPerson2) {
+        leadEngs = {};
+        descNames(leadPerson2.id).forEach(function(n){ leadEngs[n]=true; });
+      }
+    }
   }
 
   return KA.filter(function(k) {
@@ -1132,6 +1147,14 @@ function setSyncStatus(msg, color) {
 }
 
 function applyLiveData(data) {
+  // Build swarm lead map from live people data (Swarm_Lead__c field in OrgCS)
+  SWARM_LEAD_MAP = {};
+  (data.people || []).forEach(function(p) {
+    if (!p.swarmLead) return;
+    if (!SWARM_LEAD_MAP[p.swarmLead]) SWARM_LEAD_MAP[p.swarmLead] = {};
+    SWARM_LEAD_MAP[p.swarmLead][p.name] = true;
+  });
+
   // Rebuild CASES from live data — add manager via PEOPLE hierarchy
   CASES = (data.cases || []).map(function(c) {
     // Find manager: look up owner in PEOPLE by name, get their mid → parent name

@@ -89,14 +89,31 @@ async function main() {
     };
   });
 
+  console.log('[fetch] Querying People (Swarm Lead assignments)...');
+  const peopleRecords = await sfQuery(
+    'SELECT Name, Swarm_Lead__r.Name ' +
+    'FROM User ' +
+    'WHERE IsActive = true ' +
+    'AND Swarm_Lead__c != null ' +
+    'LIMIT 5000'
+  );
+
+  const people = peopleRecords.map(function(r) {
+    return {
+      name:      r.Name,
+      swarmLead: r.Swarm_Lead__r ? r.Swarm_Lead__r.Name : ''
+    };
+  });
+
   const output = {
     generatedAt: new Date().toISOString(),
-    cases: cases,
-    ka:    ka
+    cases:  cases,
+    ka:     ka,
+    people: people
   };
 
   fs.writeFileSync('data.json', JSON.stringify(output, null, 2));
-  console.log('[fetch] Done — ' + cases.length + ' cases, ' + ka.length + ' KA articles written to data.json');
+  console.log('[fetch] Done — ' + cases.length + ' cases, ' + ka.length + ' KA articles, ' + people.length + ' people written to data.json');
 }
 
 main().catch(function(e) {
