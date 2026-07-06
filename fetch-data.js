@@ -48,15 +48,21 @@ function sfQuery(soql) {
 }
 
 async function main() {
-  console.log('[fetch] Querying Cases...');
+  // ±7 day window: 7 days back through 7 days forward from today
+  var now      = new Date();
+  var startDT  = new Date(now.getTime() - 7 * 86400000).toISOString().replace(/\.\d+Z$/, 'Z');
+  var endDT    = new Date(now.getTime() + 7 * 86400000).toISOString().replace(/\.\d+Z$/, 'Z');
+  var dateFilter = 'CreatedDate >= ' + startDT + ' AND CreatedDate <= ' + endDT;
+
+  console.log('[fetch] Querying Cases (' + startDT.slice(0,10) + ' to ' + endDT.slice(0,10) + ')...');
   const caseRecords = await sfQuery(
     'SELECT CaseNumber, Subject, Owner.Name, CaseReportingTaxonomy__r.Name, Status, CreatedDate ' +
     'FROM Case ' +
-    'WHERE CreatedDate = LAST_N_DAYS:30 ' +
+    'WHERE ' + dateFilter + ' ' +
     'AND CaseReportingTaxonomy__c != null ' +
     'AND Owner.IsActive = true ' +
     'ORDER BY CreatedDate DESC ' +
-    'LIMIT 50000'
+    'LIMIT 5000'
   );
 
   const cases = caseRecords.map(function(r) {
@@ -70,12 +76,12 @@ async function main() {
     };
   });
 
-  console.log('[fetch] Querying KA articles...');
+  console.log('[fetch] Querying KA articles (' + startDT.slice(0,10) + ' to ' + endDT.slice(0,10) + ')...');
   const kaRecords = await sfQuery(
     "SELECT ArticleNumber, Title, CreatedBy.Name, CreatedDate " +
     "FROM KnowledgeArticleVersion " +
     "WHERE PublishStatus = 'Online' " +
-    "AND CreatedDate = LAST_N_DAYS:30 " +
+    "AND " + dateFilter + " " +
     "ORDER BY CreatedDate DESC " +
     "LIMIT 5000"
   );
@@ -106,7 +112,9 @@ async function main() {
   });
 
   const output = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: now.toISOString(),
+    windowStart: startDT,
+    windowEnd:   endDT,
     cases:  cases,
     ka:     ka,
     people: people

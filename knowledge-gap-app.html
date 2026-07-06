@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Knowledge Gap Dashboard – Krishna Org</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --brand:#0176d3;--dark:#014486;--light:#d8edff;
+  --green:#2e844a;--orange:#dd7a01;--red:#c23934;--purple:#9050e9;
+  --bg:#f3f3f3;--card:#fff;--border:#dddbda;--text:#181818;--muted:#706e6b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Salesforce Sans',Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--dark),var(--brand));color:#fff;padding:11px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.hdr h1{font-size:1.05rem;font-weight:700;}
+.hdr p{font-size:.73rem;opacity:.82;margin-top:1px;}
+.hdr-badge{margin-left:auto;background:#fff2;border:1px solid #fff4;border-radius:20px;padding:3px 11px;font-size:.7rem;font-weight:600;}
+
+/* FILTER BAR */
+.fbar{background:var(--card);border-bottom:1px solid var(--border);padding:7px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0;}
+.fbar label{font-size:.73rem;font-weight:600;color:var(--muted);}
+.fbar input,.fbar select{border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:.78rem;background:#fff;color:var(--text);}
+.fbar input:focus,.fbar select:focus{outline:2px solid var(--brand);}
+.fbar input{min-width:200px;}
+.fbtn{border:1px solid var(--brand);background:none;color:var(--brand);border-radius:4px;padding:5px 12px;cursor:pointer;font-size:.76rem;font-weight:600;}
+.fbtn:hover{background:var(--light);}
+.fbtn.primary{background:var(--brand);color:#fff;}
+.fbtn.primary:hover{background:var(--dark);}
+.ml{margin-left:auto;}
+
+/* LAYOUT */
+.body{display:flex;flex:1;overflow:hidden;}
+
+/* LEFT HIERARCHY PANEL */
+.lp{width:270px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.lp-hdr{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.lp-hdr h3{font-size:.82rem;font-weight:700;flex:1;}
+.lp-hdr span{font-size:.62rem;color:var(--muted);}
+.lp-search{padding:6px 8px;border-bottom:1px solid var(--border);}
+.lp-search input{width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:.75rem;}
+.tree-scroll{overflow-y:auto;flex:1;padding:4px 2px;}
+
+/* TREE NODES */
+.tn{margin:1px 0;}
+.tr{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;cursor:pointer;transition:background .1s;}
+.tr:hover{background:#f0f5ff;}
+.tr.selected{background:var(--light);border-left:3px solid var(--brand);padding-left:3px;}
+.ttog{width:13px;font-size:.58rem;color:var(--muted);text-align:center;flex-shrink:0;}
+.tav{width:21px;height:21px;border-radius:50%;background:var(--light);color:var(--dark);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;flex-shrink:0;}
+.tav.on{background:var(--brand);color:#fff;}
+.tname{font-size:.76rem;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tbadge{font-size:.58rem;border-radius:8px;padding:1px 5px;white-space:nowrap;flex-shrink:0;}
+.tc{margin-left:18px;border-left:2px solid #e5e9f2;padding-left:4px;display:none;}
+.tc.open{display:block;}
+
+/* role badge colors */
+.rd{background:#d8edff;color:#014486;}
+.rsm{background:#f3ebff;color:#6a14d4;}
+.rm{background:#eaf5ea;color:#1a6d2a;}
+.rs{background:#fff0d9;color:#9a5300;}
+.re{background:#f0f0f0;color:#444;}
+
+/* RIGHT PANEL */
+.rp{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+
+/* CONTEXT BANNER */
+.ctx{display:none;background:var(--light);border-bottom:1px solid var(--brand);padding:7px 16px;font-size:.78rem;align-items:center;gap:8px;flex-shrink:0;}
+.ctx strong{color:var(--dark);}
+.ctx-clear{margin-left:auto;cursor:pointer;color:var(--brand);font-weight:700;font-size:.75rem;}
+
+/* KPI STRIP */
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;padding:12px 16px;flex-shrink:0;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:11px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.kpi .v{font-size:1.55rem;font-weight:700;color:var(--brand);}
+.kpi .l{font-size:.67rem;color:var(--muted);margin-top:2px;}
+
+/* CONTENT */
+.content{padding:0 16px 24px;flex:1;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:2px solid var(--border);}
+.tab{padding:8px 15px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+.tab.active{color:var(--brand);border-bottom-color:var(--brand);}
+.tpanel{display:none;}
+.tpanel.active{display:block;}
+
+/* CHARTS */
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.ch{padding:10px 13px;border-bottom:1px solid var(--border);}
+.ch h4{font-size:.82rem;font-weight:700;}
+.ch span{font-size:.68rem;color:var(--muted);}
+.cw{padding:10px 13px;}
+canvas{max-height:210px;}
+
+/* TABLES */
+.tw{overflow-x:auto;margin-top:12px;}
+table{width:100%;border-collapse:collapse;font-size:.78rem;}
+th{background:#f8f9fa;text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-weight:700;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;}
+td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f5f8fc;}
+
+/* TABLE BADGES / PILLS */
+.badge{display:inline-block;border-radius:10px;padding:2px 7px;font-size:.66rem;font-weight:700;}
+.b-miss{background:#fff0d9;color:#9a5300;border:1px solid #ffd580;}
+.b-voc{background:#f3ebff;color:#6a14d4;border:1px solid #c7a8f9;}
+.b-ok{background:#eaf5ea;color:#1a6d2a;border:1px solid #a8d5a9;}
+.b-upd{background:#fff5e0;color:#9a5300;border:1px solid #ffd080;}
+.pill{display:inline-block;background:var(--light);color:var(--dark);border-radius:10px;padding:1px 7px;font-size:.66rem;font-weight:600;margin:1px;}
+.gap-tag{font-size:.68rem;color:var(--red);background:#fde8e8;border-radius:3px;padding:1px 5px;display:block;margin-top:2px;}
+.art-link{color:var(--brand);text-decoration:none;font-size:.73rem;}
+.art-link:hover{text-decoration:underline;}
+.art-sub{font-size:.68rem;color:var(--muted);display:block;margin-top:1px;}
+.pbar{background:#e8e8e8;border-radius:3px;height:7px;width:75px;display:inline-block;vertical-align:middle;}
+.pbar-fill{background:var(--brand);border-radius:3px;height:7px;}
+.empty-row{text-align:center;padding:28px;color:var(--muted);font-size:.82rem;}
+
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 13px;border-top:1px solid var(--border);background:#fafafa;}
+.li{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--muted);}
+
+@media(max-width:860px){.crow{grid-template-columns:1fr;}.lp{width:220px;}}
+@media(max-width:620px){.body{flex-direction:column;}.lp{width:100%;height:180px;border-right:none;border-bottom:1px solid var(--border);}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <rect width="28" height="28" rx="6" fill="white" fill-opacity=".15"/>
+    <path d="M14 4C8.477 4 4 8.477 4 14s4.477 10 10 10 10-4.477 10-10S19.523 4 14 4zm1 13.414V19h-2v-1.586l-3.707-3.707 1.414-1.414L12 15.586V8h2v7.586l2.293-2.293 1.414 1.414L15 17.414z" fill="white"/>
+  </svg>
+  <div>
+    <h1>Knowledge Gap &amp; VOC Dashboard</h1>
+    <p>Krishna Davuluri Org &nbsp;·&nbsp; <span id="hdrWindow">±7 Day Window</span> &nbsp;·&nbsp; Click any person in the hierarchy to filter</p>
+  </div>
+  <div class="hdr-badge" id="hdrBadge">Loading...</div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="fbar">
+  <label>Search</label>
+  <input type="text" id="fSearch" placeholder="Topic, engineer, article..."/>
+  <label>KA Status</label>
+  <select id="fKA">
+    <option value="">All</option>
+    <option value="missing">Draft KA Needed</option>
+    <option value="partial">Needs Update</option>
+    <option value="exists">Article Exists</option>
+    <option value="voc">VOC Opportunity</option>
+  </select>
+  <label>Topic</label>
+  <select id="fTopic"><option value="">All Topics</option></select>
+  <label>Pod</label>
+  <select id="fPod"><option value="">All Pods</option></select>
+  <label>Swarm Lead</label>
+  <select id="fSwarm"><option value="">All Swarm Leads</option></select>
+  <label>Manager</label>
+  <select id="fManager"><option value="">All Managers</option></select>
+  <label>Engineer</label>
+  <select id="fEngineer"><option value="">All Engineers</option></select>
+  <button class="fbtn ml" id="btnReset">Reset All</button>
+  <button class="fbtn primary" id="btnExpand">Expand Tree</button>
+  <button class="fbtn" id="btnCollapse">Collapse Tree</button>
+</div>
+
+<div class="body">
+
+  <!-- LEFT: HIERARCHY TREE -->
+  <div class="lp">
+    <div class="lp-hdr">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="3.5" r="2.2" stroke="#0176d3" stroke-width="1.3"/><path d="M1.5 11.5c0-2.485 2.239-4.5 5-4.5s5 2.015 5 4.5" stroke="#0176d3" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <h3>Krishna Org Hierarchy</h3>
+      <span>click to filter</span>
+    </div>
+    <div class="lp-search"><input type="text" id="tSearch" placeholder="Search people..."/></div>
+    <div class="tree-scroll" id="treeRoot"></div>
+  </div>
+
+  <!-- RIGHT: DASHBOARD -->
+  <div class="rp">
+
+    <!-- CONTEXT BANNER -->
+    <div class="ctx" id="ctxBanner">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="3.5" r="2.2" stroke="#0176d3" stroke-width="1.3"/><path d="M1.5 11.5c0-2.485 2.239-4.5 5-4.5s5 2.015 5 4.5" stroke="#0176d3" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <span>Filtered by: <strong id="ctxName"></strong> &nbsp;<em id="ctxSub" style="color:var(--muted);font-size:.72rem;"></em></span>
+      <span class="ctx-clear" id="ctxClear">✕ Clear</span>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="krow">
+      <div class="kpi"><div class="v" id="kCases">—</div><div class="l">Cases (30d)</div></div>
+      <div class="kpi"><div class="v" id="kTopics">—</div><div class="l">Topics</div></div>
+      <div class="kpi"><div class="v" id="kMiss">—</div><div class="l">New KA Needed</div></div>
+      <div class="kpi"><div class="v" id="kPart">—</div><div class="l">Needs Update</div></div>
+      <div class="kpi"><div class="v" id="kVOC">—</div><div class="l">VOC Signals</div></div>
+      <div class="kpi"><div class="v" id="kKA">—</div><div class="l">KA Created</div></div>
+      <div class="kpi"><div class="v" id="kEngs">—</div><div class="l">Engineers</div></div>
+    </div>
+
+    <div class="content">
+      <div class="tabs">
+        <div class="tab active" data-tab="gap">KA Gap &amp; VOC</div>
+        <div class="tab" data-tab="eng">Engineer Tracker</div>
+        <div class="tab" data-tab="mgr">Manager View</div>
+        <div class="tab" data-tab="hier">Hierarchy Table</div>
+      </div>
+
+      <!-- TAB: GAP -->
+      <div class="tpanel active" id="tab-gap">
+        <div class="crow">
+          <div class="card">
+            <div class="ch"><h4>Top Topics by Case Volume</h4><span>Color = KA status</span></div>
+            <div class="cw"><canvas id="cTopics"></canvas></div>
+            <div class="legend">
+              <div class="li"><span style="width:10px;height:10px;background:#fe9339;border-radius:2px;display:inline-block;"></span>Draft KA Needed</div>
+              <div class="li"><span style="width:10px;height:10px;background:#9050e9;border-radius:2px;display:inline-block;"></span>VOC Opportunity</div>
+              <div class="li"><span style="width:10px;height:10px;background:#0176d3;border-radius:2px;display:inline-block;"></span>Needs Update</div>
+              <div class="li"><span style="width:10px;height:10px;background:#2e844a;border-radius:2px;display:inline-block;"></span>Article Exists</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><h4>KA Created by Engineer (30d)</h4></div>
+            <div class="cw"><canvas id="cKA"></canvas></div>
+          </div>
+        </div>
+        <div class="card tw">
+          <table id="tGap">
+            <thead><tr>
+              <th>Topic</th><th>Cases</th><th>Recommendation</th>
+              <th>Existing Article</th><th>Gap / What's Missing</th><th>Engineers</th>
+            </tr></thead>
+            <tbody id="bGap"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: ENGINEER -->
+      <div class="tpanel" id="tab-eng">
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Engineer</th><th>Manager</th><th>Pod</th>
+              <th>Cases</th><th>KA Created</th><th>KA Article Topics</th><th>Case Load</th>
+            </tr></thead>
+            <tbody id="bEng"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: MANAGER -->
+      <div class="tpanel" id="tab-mgr">
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Manager</th><th>Role Level</th><th>Engineers</th>
+              <th>Total Cases</th><th>KA Created</th><th>Top Gap Topics</th><th>VOC Signals</th>
+            </tr></thead>
+            <tbody id="bMgr"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: HIERARCHY -->
+      <div class="tpanel" id="tab-hier">
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Name</th><th>Title / Role</th><th>Reports To</th>
+              <th>Pod</th><th>Cases (30d)</th><th>KA Created</th><th>Slack</th>
+            </tr></thead>
+            <tbody id="bHier"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /rp -->
+</div><!-- /body -->
+
+<script>
+// ============================================================
+// DATA  — live from data.json (weekly refresh, ±7 day window)
+// ============================================================
+
+// Populated after fetch; hardcoded as fallback only for PEOPLE hierarchy
+var CASES = [];
+var KA    = [];
+
+function loadData() {
+  return fetch('data.json?_=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.cases && d.cases.length)  CASES = d.cases;
+      if (d.ka    && d.ka.length)     KA    = d.ka;
+
+      // Update header window label
+      if (d.windowStart && d.windowEnd) {
+        var s = d.windowStart.slice(0,10), e = d.windowEnd.slice(0,10);
+        document.getElementById('hdrWindow').textContent = s + ' → ' + e;
+      }
+      var ts = d.generatedAt ? new Date(d.generatedAt).toLocaleDateString() : '—';
+      document.getElementById('hdrBadge').textContent = 'Refreshed ' + ts;
+    })
+    .catch(function() {
+      document.getElementById('hdrBadge').textContent = 'Offline – sample data';
+    });
+}
+
+var PEOPLE = [
+  // L0
+  {id:"KDV", name:"Krishna Davuluri",         title:"Senior Director, Technical Support Engineering", email:"kdv@salesforce.com",                   slack:"kdv",                 mid:null,  pod:"Leadership"},
+  // L1 – direct to Krishna
+  {id:"MC",  name:"Mukul Chandok",             title:"Director, Technical Support Engineering",        email:"mchandok@salesforce.com",              slack:"mchandok",            mid:"KDV", pod:"India – Sales Cloud"},
+  {id:"AV",  name:"Amit Verma",                title:"Director, Technical Support Engineering",        email:"amitverma@salesforce.com",             slack:"amitverma",           mid:"KDV", pod:"India – Service Cloud"},
+  {id:"FS",  name:"Francesca Settembrino",     title:"Director, Technical Support Engineering",        email:"fsettembrino@salesforce.com",          slack:"fsettembrino",        mid:"KDV", pod:"EMEA"},
+  {id:"TO",  name:"Talita de Oliveira",        title:"Manager, Technical Support Engineering",         email:"tsimoesdeoliveira@salesforce.com",     slack:"talita",              mid:"KDV", pod:"EMEA"},
+  {id:"SB",  name:"Simardeep Bindra",          title:"Senior Principal Swarm Lead",                    email:"s.bindra@salesforce.com",              slack:"s.bindra",            mid:"KDV", pod:"Swarm"},
+  {id:"JSQ", name:"Joao Sequeira",             title:"Principal Swarm Lead",                           email:"jcorreiasequeira@salesforce.com",      slack:"jcorreiasequeira",    mid:"KDV", pod:"Swarm"},
+  {id:"PCO", name:"Patrick Coakley",           title:"Principal Swarm Lead",                           email:"pcoakley@salesforce.com",              slack:"pcoakley",            mid:"KDV", pod:"Swarm"},
+  {id:"RQT", name:"Renato Quattrocchi",        title:"Principal Swarm Lead",                           email:"pquattrocchi@salesforce.com",          slack:"pquattrocchi",        mid:"KDV", pod:"Swarm"},
+  // L2 – under Mukul Chandok
+  {id:"AA",  name:"Ajith Anand",               title:"Sr Manager, Technical Support Engineering",      email:"aanand@salesforce.com",                slack:"aanand",              mid:"MC",  pod:"India – Sales Cloud"},
+  {id:"SD",  name:"Swati Devsoth",             title:"Sr Manager, Technical Support Engineering",      email:"sdevsoth@salesforce.com",              slack:"sdevsoth",            mid:"MC",  pod:"India – Sales Cloud"},
+  {id:"CB",  name:"Chaitanya Kumar Bansetti",  title:"Principal Swarm Lead",                           email:"cbansetti@salesforce.com",             slack:"cbansetti",           mid:"MC",  pod:"Swarm"},
+  {id:"CSH", name:"Chinmayee Sahoo",           title:"Principal Swarm Lead",                           email:"csahoo@salesforce.com",                slack:"csahoo",              mid:"MC",  pod:"Swarm"},
+  {id:"DML", name:"Deepak Kumar Mallela",      title:"Principal Swarm Lead",                           email:"dmallela@salesforce.com",              slack:"dmallela",            mid:"MC",  pod:"Swarm"},
+  {id:"TJN", name:"Tushar Jain",               title:"Principal Swarm Lead",                           email:"tushar.jain@salesforce.com",           slack:"tushar.jain",         mid:"MC",  pod:"Swarm"},
+  // L2 – under Amit Verma
+  {id:"MAB", name:"Mathews Abraham",           title:"Sr Manager, Technical Support Engineering",      email:"mathews.abraham@salesforce.com",       slack:"mathews.abraham",     mid:"AV",  pod:"India – Service Cloud"},
+  {id:"AWD", name:"Anurikt Wadhwa",            title:"Sr Manager, Technical Support Engineering",      email:"awadhwa@salesforce.com",               slack:"awadhwa",             mid:"AV",  pod:"India – Service Cloud"},
+  {id:"MMT", name:"Mudit Mathur",              title:"Sr Manager, Technical Support Engineering",      email:"mudit.mathur@salesforce.com",          slack:"mudit.mathur",        mid:"AV",  pod:"India – Service Cloud"},
+  {id:"SKS", name:"Shakti Singh",              title:"Principal Swarm Lead",                           email:"shakti.singh@salesforce.com",          slack:"shakti.singh",        mid:"AV",  pod:"Swarm"},
+  {id:"STP", name:"Satyanarayana Polepalli",   title:"Principal Swarm Lead",                           email:"s.polepalli@salesforce.com",           slack:"s.polepalli",         mid:"AV",  pod:"Swarm"},
+  // L3 – under Ajith Anand
+  {id:"CBS", name:"Chandra Bhanu Shukla",      title:"Manager, Technical Support Engineering",         email:"cshukla@salesforce.com",               slack:"cshukla",             mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"SBH", name:"Shyam Bihari",              title:"Manager, Technical Support Engineering",         email:"sbihari@salesforce.com",               slack:"sbihari",             mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"SAL", name:"Saikumar Alapati",          title:"Manager, Technical Support Engineering",         email:"saikumara@salesforce.com",             slack:"saikumara",           mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"SRK", name:"Saicharan Reddy Kasireddy", title:"Manager, Technical Support Engineering",         email:"sreddyk@salesforce.com",               slack:"sreddyk",             mid:"AA",  pod:"India – Sales Cloud"},
+  {id:"HJS", name:"Hari Jitray Surya S",       title:"Principal Swarm Lead",                           email:"hari.s@salesforce.com",                slack:"hari.s",              mid:"AA",  pod:"Swarm"},
+  {id:"IAP", name:"Issac Ananda Pal C",        title:"Principal Swarm Lead",                           email:"issacanandapal.c@salesforce.com",      slack:"issacanandapal.c",    mid:"AA",  pod:"Swarm"},
+  {id:"STG", name:"Sravankumar Tangudu",       title:"Principal Swarm Lead",                           email:"stangudu@salesforce.com",              slack:"stangudu",            mid:"AA",  pod:"Swarm"},
+  {id:"PCV", name:"Priya Chowdary Vemsani",    title:"Principal Swarm Lead",                           email:"pvemsani@salesforce.com",              slack:"pvemsani",            mid:"AA",  pod:"Swarm"},
+  {id:"SAN", name:"Shaan Anshu",               title:"Principal Swarm Lead",                           email:"sanshu@salesforce.com",                slack:"sanshu",              mid:"AA",  pod:"Swarm"},
+  // L3 – under Swati Devsoth
+  {id:"HAL", name:"Harish Alla",               title:"Manager, Technical Support Engineering",         email:"halla@salesforce.com",                 slack:"halla",               mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"SHT", name:"Shikha Tripathi",           title:"Manager, Technical Support Engineering",         email:"shikha.tripathi@salesforce.com",       slack:"shikha.tripathi",     mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"VPW", name:"Vidyabai Pawar",            title:"Manager, Technical Support Engineering",         email:"vidyabai.pawar@salesforce.com",        slack:"vidyabai.pawar",      mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"VPB", name:"Vivek Pai Baidebettu",      title:"Manager, Technical Support Engineering",         email:"vpaibaidebettu@salesforce.com",        slack:"vpaibaidebettu",      mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"SCI", name:"Suchetana CI",              title:"Manager, Technical Support Engineering",         email:"suchetana.ci@salesforce.com",          slack:"suchetana.ci",        mid:"SD",  pod:"India – Sales Cloud"},
+  {id:"MEL", name:"Madhu Elipe",               title:"Principal Swarm Lead",                           email:"melipe@salesforce.com",                slack:"melipe",              mid:"SD",  pod:"Swarm"},
+  {id:"RPW", name:"Rahul Pawar",               title:"Swarm Lead",                                     email:"rahul.pawar@salesforce.com",           slack:"rahul.pawar",         mid:"SD",  pod:"Swarm"},
+  {id:"SSK", name:"Sanjeev Kumar Singh",        title:"Swarm Lead",                                     email:"sanjeev.singh@salesforce.com",         slack:"sanjeev.singh",       mid:"SD",  pod:"Swarm"},
+  // L3 – under Mathews Abraham
+  {id:"MGR", name:"Mayank Gairola",            title:"Manager, Technical Support Engineering",         email:"mgairola@salesforce.com",              slack:"mgairola",            mid:"MAB", pod:"India – Service Cloud"},
+  {id:"PMK", name:"Priyanka Mukherjee",        title:"Manager, Technical Support Engineering",         email:"priyanka.mukherjee@salesforce.com",    slack:"priyanka.mukherjee",  mid:"MAB", pod:"India – Service Cloud"},
+  {id:"RKR", name:"Remya Krishnan",            title:"Manager, Technical Support Engineering",         email:"remya.krishnan@salesforce.com",        slack:"remya.krishnan",      mid:"MAB", pod:"India – Service Cloud"},
+  {id:"KAR", name:"Khan Anas Rehmani",         title:"Principal Swarm Lead",                           email:"krehmani@salesforce.com",              slack:"krehmani",            mid:"MAB", pod:"Swarm"},
+  {id:"RSV", name:"Ravi Sourav",               title:"Swarm Lead",                                     email:"rsourav@salesforce.com",               slack:"rsourav",             mid:"MAB", pod:"Swarm"},
+  {id:"SSR", name:"Sushmita Srivastava",        title:"Swarm Lead",                                     email:"sushmita.srivastava@salesforce.com",   slack:"sushmita.srivastava", mid:"MAB", pod:"Swarm"},
+  // L3 – under Anurikt Wadhwa
+  {id:"MRH", name:"Mayur Rohra",               title:"Manager, Technical Support Engineering",         email:"mayur.rohra@salesforce.com",           slack:"mayur.rohra",         mid:"AWD", pod:"India – Service Cloud"},
+  {id:"ADG", name:"Amit Daga",                 title:"Manager, Technical Support Engineering",         email:"amit.daga@salesforce.com",             slack:"amit.daga",           mid:"AWD", pod:"India – Service Cloud"},
+  {id:"DSN", name:"Deep Sanghani",             title:"Manager, Technical Support Engineering",         email:"dsanghani@salesforce.com",             slack:"dsanghani",           mid:"AWD", pod:"India – Service Cloud"},
+  {id:"AMS", name:"Abhishek Massand",          title:"Manager, Technical Support Engineering",         email:"amassand@salesforce.com",              slack:"amassand",            mid:"AWD", pod:"India – Service Cloud"},
+  {id:"PDV", name:"Pushpa Devaraj",            title:"Manager, Technical Support Engineering",         email:"pdevaraj@salesforce.com",              slack:"pdevaraj",            mid:"AWD", pod:"India – Service Cloud"},
+  {id:"AGP", name:"Anudeep Gopagoni",          title:"Principal Swarm Lead",                           email:"agopagoni@salesforce.com",             slack:"agopagoni",           mid:"AWD", pod:"Swarm"},
+  {id:"JSL", name:"Jasmeet Singh Saluja",      title:"Swarm Lead",                                     email:"jsaluja@salesforce.com",               slack:"jsaluja",             mid:"AWD", pod:"Swarm"},
+  {id:"AGK", name:"Amit Gaikwad",              title:"Swarm Lead",                                     email:"amit.gaikwad@salesforce.com",          slack:"amit.gaikwad",        mid:"AWD", pod:"Swarm"},
+  // L3 – under Mudit Mathur
+  {id:"AMR", name:"Ankur Mishra",              title:"Manager, Technical Support Engineering",         email:"ankurmishra@salesforce.com",           slack:"ankurmishra",         mid:"MMT", pod:"India – Service Cloud"},
+  {id:"ANM", name:"Anil Maharana",             title:"Manager, Technical Support Engineering",         email:"a.maharana@salesforce.com",            slack:"a.maharana",          mid:"MMT", pod:"India – Service Cloud"},
+  {id:"DWN", name:"Durfshan Wani",             title:"Manager, Technical Support Engineering",         email:"dwani@salesforce.com",                 slack:"dwani",               mid:"MMT", pod:"India – Service Cloud"},
+  {id:"DGR", name:"Devendra Gurung",           title:"Principal Swarm Lead",                           email:"devendra.gurung@salesforce.com",       slack:"devendra.gurung",     mid:"MMT", pod:"Swarm"},
+  {id:"ASH", name:"Amisha Sharma",             title:"Swarm Lead",                                     email:"amisha.sharma@salesforce.com",         slack:"amisha.sharma",       mid:"MMT", pod:"Swarm"},
+  {id:"SLT", name:"Saloni Tiwari",             title:"Swarm Lead",                                     email:"saloni.tiwari@salesforce.com",         slack:"saloni.tiwari",       mid:"MMT", pod:"Swarm"},
+  {id:"VKN", name:"Vinod Kumar Nadimpalli",    title:"Swarm Lead",                                     email:"kumar.vinod@salesforce.com",           slack:"kumar.vinod",         mid:"MMT", pod:"Swarm"},
+  // Engineers (TSEs who appear in case data)
+  {id:"ATG", name:"Amith TG",                  title:"Technical Support Engineer",                     email:"amith.tg@salesforce.com",              slack:"amith.tg",            mid:"MAB", pod:"India – Service Cloud"},
+  {id:"SJH", name:"Subhika Jha",               title:"Technical Support Engineer",                     email:"subhika.jha@salesforce.com",           slack:"subhika.jha",         mid:"MAB", pod:"India – Service Cloud"},
+  {id:"AKS", name:"Aditya Kumar Singh",        title:"Technical Support Engineer",                     email:"aditya.singh@salesforce.com",          slack:"aditya.singh",        mid:"MAB", pod:"India – Service Cloud"},
+  {id:"RGL", name:"Rohit Gilda",               title:"Technical Support Engineer",                     email:"rohit.gilda@salesforce.com",           slack:"rohit.gilda",         mid:"SCI", pod:"India – Sales Cloud"},
+  {id:"MZA", name:"Md Zeeshan Ahmad",          title:"Technical Support Engineer",                     email:"md.zeeshan@salesforce.com",            slack:"md.zeeshan",          mid:"AMR", pod:"India – Service Cloud"},
+  {id:"JWG", name:"Jonathan Weng",             title:"Technical Support Engineer",                     email:"jonathan.weng@salesforce.com",         slack:"jonathan.weng",       mid:"FS",  pod:"EMEA"}
+];
+
+// CASES and KA are loaded from data.json by loadData() above.
+// They start as empty arrays and are populated before renderAll() is called.
+
+var TOPIC_RULES = [
+  {t:"Flow / Process Builder",  kw:["flow","process builder","screen flow","interview","fault path"]},
+  {t:"Apex & Governor Limits",  kw:["apex","cpu limit","soql","too many","governor","trigger","recursion","async","batch"]},
+  {t:"EAC / Inbox Sync",        kw:["eac","inbox","sync","activity","einstein activity"]},
+  {t:"Sandbox & DevOps",        kw:["sandbox","refresh","pending","deployment","metadata"]},
+  {t:"Revenue Schedules / CPQ", kw:["revenue","schedule","quantity","price","recalc","cpq","product"]},
+  {t:"Lightning / LWC",         kw:["lightning","lwc","mobile","component","render","wire"]},
+  {t:"Security & Access",       kw:["permission","sharing","ip restriction","login","access"]},
+  {t:"Integration & API",       kw:["rest api","api","callout","oauth","named credential","timeout","soap"]},
+  {t:"Data Management",         kw:["data loader","upsert","external id","export","duplicate"]},
+  {t:"Email & Notifications",   kw:["email","notification","approval","deliverability","bounce","attachment"]},
+  {t:"Omni-Channel / Routing",  kw:["omni","routing","assign","queue"]},
+  {t:"Tableau / Analytics",     kw:["tableau","analytics"]}
+];
+
+var KA_MAP = {
+  "Flow / Process Builder":  {s:"partial", an:"000382004", at:"Flow not triggering on record update – common causes",        gap:"Screen Flow mobile rendering & fault path not covered; no Process Builder to Flow migration guide"},
+  "Apex & Governor Limits":  {s:"exists",  an:"000382001", at:"Resolving Apex CPU Time Limit Exceeded in Batch Jobs",         gap:"Trigger recursion and async SOQL 101 need a consolidated Apex governor limits guide"},
+  "EAC / Inbox Sync":        {s:"partial", an:"000382005", at:"EAC Activity Sync – Troubleshooting Einstein Activity Capture", gap:"Calendar sync and Salesforce Inbox integration steps not documented; VOC trend growing"},
+  "Sandbox & DevOps":        {s:"exists",  an:"000382003", at:"Sandbox Refresh Stuck in Pending – Steps to Resolve",          gap:"Custom metadata deployment errors and release critical update impact on sandbox missing"},
+  "Revenue Schedules / CPQ": {s:"missing", an:"",          at:"",                                                              gap:"No article for productRevenueSchedules qty/price behavior; Pilot Classic recalculate feature undocumented; Lightning gap = VOC"},
+  "Lightning / LWC":         {s:"partial", an:"000383497", at:"URL redirects in the Salesforce mobile app",                   gap:"@wire returning null and LWC mobile rendering issues not in existing article"},
+  "Security & Access":       {s:"missing", an:"",          at:"",                                                              gap:"No consolidated Permission Set vs Sharing Rules guide; Login IP lockout article needs refresh"},
+  "Integration & API":       {s:"exists",  an:"000386160", at:"Debug Salesforce Web Service Callouts Using SoapUI",            gap:"Named Credential OAuth token refresh and REST API timeout troubleshooting absent"},
+  "Data Management":         {s:"missing", an:"",          at:"",                                                              gap:"No article on Data Loader upsert external ID failures or Data Export scheduling; VOC candidate"},
+  "Email & Notifications":   {s:"partial", an:"000385111", at:"Too many API email invocations error – Apex",                   gap:"Email-to-Case attachment loss and sandbox deliverability bounce not documented"},
+  "Omni-Channel / Routing":  {s:"voc",     an:"",          at:"",                                                              gap:"Multiple customers reporting routing failures; strong VOC signal; no article exists"},
+  "Tableau / Analytics":     {s:"missing", an:"",          at:"",                                                              gap:"No article for Tableau Cloud refresh schedule failures; multilingual documentation also needed"},
+  "Other":                   {s:"missing", an:"",          at:"",                                                              gap:"Unclassified topics – review case subjects manually"}
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function getTopic(subj) {
+  var s = subj.toLowerCase();
+  for (var i = 0; i < TOPIC_RULES.length; i++) {
+    for (var j = 0; j < TOPIC_RULES[i].kw.length; j++) {
+      if (s.indexOf(TOPIC_RULES[i].kw[j]) !== -1) return TOPIC_RULES[i].t;
+    }
+  }
+  return "Other";
+}
+
+function roleClass(title) {
+  var t = (title || '').toLowerCase();
+  if (t.indexOf('director') !== -1)                                  return 'rd';
+  if (t.indexOf('sr manager') !== -1 || t.indexOf('senior manager') !== -1) return 'rsm';
+  if (t.indexOf('manager') !== -1)                                   return 'rm';
+  if (t.indexOf('swarm') !== -1)                                     return 'rs';
+  return 're';
+}
+
+function shortRole(title) {
+  var t = (title || '').toLowerCase();
+  if (t.indexOf('senior director') !== -1)  return 'Sr Director';
+  if (t.indexOf('director') !== -1)         return 'Director';
+  if (t.indexOf('sr manager') !== -1 || t.indexOf('senior manager') !== -1) return 'Sr Manager';
+  if (t.indexOf('manager') !== -1)          return 'Manager';
+  if (t.indexOf('senior principal swarm') !== -1) return 'Sr Principal SL';
+  if (t.indexOf('principal swarm') !== -1)  return 'Principal SL';
+  if (t.indexOf('swarm') !== -1)            return 'Swarm Lead';
+  if (t.indexOf('principal technical') !== -1) return 'Principal TSE';
+  if (t.indexOf('senior technical') !== -1)    return 'Sr TSE';
+  if (t.indexOf('associate') !== -1)           return 'Assoc TSE';
+  return 'TSE';
+}
+
+function mkBadge(text, cls) {
+  var s = document.createElement('span');
+  s.className = 'badge ' + cls;
+  s.textContent = text;
+  return s;
+}
+
+function mkPill(text) {
+  var s = document.createElement('span');
+  s.className = 'pill';
+  s.textContent = text;
+  return s;
+}
+
+function recBadge(status) {
+  if (status === 'missing') return mkBadge('Draft KA Needed', 'b-miss');
+  if (status === 'voc')     return mkBadge('VOC Opportunity',  'b-voc');
+  if (status === 'partial') return mkBadge('Needs Update',     'b-upd');
+  return mkBadge('Article Exists', 'b-ok');
+}
+
+// ============================================================
+// TREE INDEX
+// ============================================================
+var byId = {}, children = {};
+PEOPLE.forEach(function(p) {
+  byId[p.id] = p;
+  children[p.id] = children[p.id] || [];
+  if (p.mid) {
+    children[p.mid] = children[p.mid] || [];
+    children[p.mid].push(p.id);
+  }
+});
+
+function descendants(id) {
+  var out = [id];
+  (children[id] || []).forEach(function(c) { out = out.concat(descendants(c)); });
+  return out;
+}
+
+function descNames(id) {
+  return descendants(id).map(function(i) { return byId[i] ? byId[i].name : ''; }).filter(Boolean);
+}
+
+// ============================================================
+// POPULATE FILTER DROPDOWNS
+// ============================================================
+(function() {
+  var topics = TOPIC_RULES.map(function(r) { return r.t; }).concat(['Other']);
+  var tSel = document.getElementById('fTopic');
+  topics.forEach(function(t) {
+    var o = document.createElement('option'); o.value = t; o.textContent = t; tSel.appendChild(o);
+  });
+
+  var pods = [];
+  PEOPLE.forEach(function(p) { if (pods.indexOf(p.pod) === -1) pods.push(p.pod); });
+  pods.sort();
+  var pSel = document.getElementById('fPod');
+  pods.forEach(function(pod) {
+    var o = document.createElement('option'); o.value = pod; o.textContent = pod; pSel.appendChild(o);
+  });
+
+  // Swarm leads
+  var swarmSel = document.getElementById('fSwarm');
+  PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('swarm') !== -1; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); })
+    .forEach(function(p){
+      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; swarmSel.appendChild(o);
+    });
+
+  // Managers (Sr Manager + Manager, not Director or Swarm)
+  var mgrSel = document.getElementById('fManager');
+  PEOPLE.filter(function(p){
+    var t = p.title.toLowerCase();
+    return (t.indexOf('manager') !== -1) && (t.indexOf('swarm') === -1) && (t.indexOf('director') === -1);
+  }).sort(function(a,b){ return a.name.localeCompare(b.name); })
+    .forEach(function(p){
+      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; mgrSel.appendChild(o);
+    });
+
+  // Engineers (TSEs)
+  var engSel = document.getElementById('fEngineer');
+  PEOPLE.filter(function(p){ return p.title.toLowerCase().indexOf('support engineer') !== -1; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); })
+    .forEach(function(p){
+      var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; engSel.appendChild(o);
+    });
+})();
+
+// ============================================================
+// STATE
+// ============================================================
+var selectedId = null;
+var charts = {};
+
+function getScope() {
+  // returns array of engineer names in scope, or null for all
+  if (!selectedId) return null;
+  return descNames(selectedId);
+}
+
+function filteredCases() {
+  var scope    = getScope();
+  var search   = (document.getElementById('fSearch').value || '').toLowerCase();
+  var kaF      = document.getElementById('fKA').value;
+  var topicF   = document.getElementById('fTopic').value;
+  var podF     = document.getElementById('fPod').value;
+  var swarmF   = document.getElementById('fSwarm').value;
+  var mgrF     = document.getElementById('fManager').value;
+  var engF     = document.getElementById('fEngineer').value;
+
+  // pod → set of names
+  var podEngs = null;
+  if (podF) {
+    podEngs = {};
+    PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
+  }
+
+  // swarm lead → set of descendant names (engineers under that swarm lead's reporting chain)
+  var swarmEngs = null;
+  if (swarmF) {
+    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
+    if (swarmPerson) {
+      swarmEngs = {};
+      descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n] = true; });
+    }
+  }
+
+  // manager → set of descendant names
+  var mgrEngs = null;
+  if (mgrF) {
+    var mgrPerson = PEOPLE.filter(function(p){ return p.name === mgrF; })[0];
+    if (mgrPerson) {
+      mgrEngs = {};
+      descNames(mgrPerson.id).forEach(function(n){ mgrEngs[n] = true; });
+    }
+  }
+
+  return CASES.filter(function(c) {
+    if (scope      && scope.indexOf(c.owner) === -1 && scope.indexOf(c.manager) === -1) return false;
+    if (podEngs    && !podEngs[c.owner]    && !podEngs[c.manager])    return false;
+    if (swarmEngs  && !swarmEngs[c.owner]  && !swarmEngs[c.manager])  return false;
+    if (mgrEngs    && !mgrEngs[c.owner]    && !mgrEngs[c.manager])    return false;
+    if (engF       && c.owner !== engF)                                return false;
+    if (search && c.subject.toLowerCase().indexOf(search) === -1 && c.owner.toLowerCase().indexOf(search) === -1) return false;
+    if (topicF && getTopic(c.subject) !== topicF) return false;
+    if (kaF) { var k = KA_MAP[getTopic(c.subject)]; if (k && k.s !== kaF) return false; }
+    return true;
+  });
+}
+
+function filteredKA() {
+  var scope   = getScope();
+  var podF    = document.getElementById('fPod').value;
+  var swarmF  = document.getElementById('fSwarm').value;
+  var mgrF    = document.getElementById('fManager').value;
+  var engF    = document.getElementById('fEngineer').value;
+
+  var podEngs = null;
+  if (podF) {
+    podEngs = {};
+    PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
+  }
+  var swarmEngs = null;
+  if (swarmF) {
+    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
+    if (swarmPerson) { swarmEngs = {}; descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n]=true; }); }
+  }
+  var mgrEngs = null;
+  if (mgrF) {
+    var mgrPerson = PEOPLE.filter(function(p){ return p.name === mgrF; })[0];
+    if (mgrPerson) { mgrEngs = {}; descNames(mgrPerson.id).forEach(function(n){ mgrEngs[n]=true; }); }
+  }
+
+  return KA.filter(function(k) {
+    if (scope     && scope.indexOf(k.author) === -1)     return false;
+    if (podEngs   && !podEngs[k.author])                 return false;
+    if (swarmEngs && !swarmEngs[k.author])               return false;
+    if (mgrEngs   && !mgrEngs[k.author])                 return false;
+    if (engF      && k.author !== engF)                  return false;
+    return true;
+  });
+}
+
+// ============================================================
+// TREE RENDER
+// ============================================================
+function buildNode(id, depth) {
+  var p = byId[id]; if (!p) return null;
+  var q = (document.getElementById('tSearch').value || '').toLowerCase();
+  var kids = children[id] || [];
+
+  var nameMatch = !q || p.name.toLowerCase().indexOf(q) !== -1 || p.title.toLowerCase().indexOf(q) !== -1;
+  var descMatch = false;
+  if (!nameMatch && q) {
+    descNames(id).forEach(function(n) { if (n.toLowerCase().indexOf(q) !== -1) descMatch = true; });
+  }
+  if (q && !nameMatch && !descMatch) return null;
+
+  var node = document.createElement('div'); node.className = 'tn';
+  var row  = document.createElement('div'); row.className  = 'tr';
+  if (selectedId === id) row.classList.add('selected');
+
+  var tog = document.createElement('div'); tog.className = 'ttog';
+  tog.textContent = kids.length ? (depth < 2 ? '▼' : '▶') : '·';
+  row.appendChild(tog);
+
+  var av = document.createElement('div');
+  av.className = 'tav' + (selectedId === id ? ' on' : '');
+  av.textContent = p.name.split(' ').slice(0,2).map(function(w){return w[0];}).join('');
+  row.appendChild(av);
+
+  var nm = document.createElement('div'); nm.className = 'tname'; nm.textContent = p.name;
+  row.appendChild(nm);
+
+  var rb = document.createElement('span');
+  rb.className = 'tbadge ' + roleClass(p.title);
+  rb.textContent = shortRole(p.title);
+  row.appendChild(rb);
+
+  node.appendChild(row);
+
+  var wrap = document.createElement('div');
+  wrap.className = 'tc' + (depth < 2 ? ' open' : '');
+  kids.forEach(function(kid) { var cn = buildNode(kid, depth + 1); if (cn) wrap.appendChild(cn); });
+  node.appendChild(wrap);
+
+  row.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (kids.length) {
+      var open = wrap.classList.contains('open');
+      wrap.classList.toggle('open');
+      tog.textContent = open ? '▶' : '▼';
+    }
+    if (selectedId === id) {
+      clearSelection();
+    } else {
+      selectNode(id);
+    }
+  });
+  return node;
+}
+
+function renderTree() {
+  var root = document.getElementById('treeRoot');
+  while (root.firstChild) root.removeChild(root.firstChild);
+  var node = buildNode('KDV', 0);
+  if (node) root.appendChild(node);
+}
+
+function selectNode(id) {
+  selectedId = id;
+  var p = byId[id];
+  var banner = document.getElementById('ctxBanner');
+  banner.style.display = 'flex';
+  document.getElementById('ctxName').textContent = p.name;
+  document.getElementById('ctxSub').textContent  = '(' + shortRole(p.title) + ') — ' + descNames(id).length + ' people in scope';
+  renderTree();
+  renderAll();
+}
+
+function clearSelection() {
+  selectedId = null;
+  document.getElementById('ctxBanner').style.display = 'none';
+  renderTree();
+  renderAll();
+}
+
+// ============================================================
+// KPI
+// ============================================================
+function renderKPIs() {
+  var fc = filteredCases(), fka = filteredKA();
+  var topics = {}; fc.forEach(function(c) { topics[getTopic(c.subject)] = true; });
+  var tl = Object.keys(topics);
+  var miss = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'missing'; }).length;
+  var part = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'partial'; }).length;
+  var voc  = tl.filter(function(t){ return KA_MAP[t] && KA_MAP[t].s === 'voc'; }).length;
+  var engs = {}; fc.forEach(function(c){ engs[c.owner] = true; });
+  document.getElementById('kCases').textContent  = fc.length;
+  document.getElementById('kTopics').textContent = tl.length;
+  document.getElementById('kMiss').textContent   = miss;
+  document.getElementById('kPart').textContent   = part;
+  document.getElementById('kVOC').textContent    = voc;
+  document.getElementById('kKA').textContent     = fka.length;
+  document.getElementById('kEngs').textContent   = Object.keys(engs).length;
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+var pal = ['#0176d3','#2e844a','#dd7a01','#9050e9','#c23934','#014486','#06857b','#e4a201','#fe9339','#3a6ea5'];
+
+function renderCharts() {
+  var fc = filteredCases(), fka = filteredKA();
+
+  // Topics bar chart
+  var tc = {};
+  fc.forEach(function(c){ var t = getTopic(c.subject); tc[t] = (tc[t]||0)+1; });
+  var te = Object.entries(tc).sort(function(a,b){return b[1]-a[1];}).slice(0,9);
+  var tl = te.map(function(e){return e[0];}), td = te.map(function(e){return e[1];});
+  var tcols = tl.map(function(l){
+    var s = KA_MAP[l] && KA_MAP[l].s;
+    return s==='missing'?'#fe9339':s==='voc'?'#9050e9':s==='partial'?'#0176d3':'#2e844a';
+  });
+  if (charts.t) charts.t.destroy();
+  charts.t = new Chart(document.getElementById('cTopics'), {
+    type: 'bar',
+    data: { labels: tl, datasets: [{ data: td, backgroundColor: tcols, borderRadius: 3 }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) {
+        var s = KA_MAP[ctx.label] && KA_MAP[ctx.label].s;
+        var tag = s==='missing'?'Draft KA Needed':s==='voc'?'VOC Opportunity':s==='partial'?'Needs Update':'Article Exists';
+        return ctx.formattedValue + ' cases — ' + tag;
+      }}}},
+      scales: { x: { ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 9 } } } }
+    }
+  });
+
+  // KA donut
+  var ec = {};
+  fka.forEach(function(k){ ec[k.author] = (ec[k.author]||0)+1; });
+  var ee = Object.entries(ec).sort(function(a,b){return b[1]-a[1];});
+  if (charts.k) charts.k.destroy();
+  if (ee.length) {
+    charts.k = new Chart(document.getElementById('cKA'), {
+      type: 'doughnut',
+      data: { labels: ee.map(function(e){return e[0];}), datasets: [{ data: ee.map(function(e){return e[1];}), backgroundColor: pal.slice(0,ee.length), borderWidth: 2 }] },
+      options: { plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 12 } } } }
+    });
+  }
+}
+
+// ============================================================
+// GAP TABLE
+// ============================================================
+function renderGap() {
+  var fc = filteredCases();
+  var td = {};
+  fc.forEach(function(c){ var t=getTopic(c.subject); if(!td[t]) td[t]={count:0,engs:{}}; td[t].count++; td[t].engs[c.owner]=true; });
+  var rows = Object.entries(td).sort(function(a,b){return b[1].count-a[1].count;});
+  var body = document.getElementById('bGap');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  if (!rows.length) {
+    var etr = document.createElement('tr'); var etd = document.createElement('td');
+    etd.colSpan = 6; etd.className = 'empty-row'; etd.textContent = 'No cases match the current filters.';
+    etr.appendChild(etd); body.appendChild(etr); return;
+  }
+
+  rows.forEach(function(entry) {
+    var topic = entry[0], info = entry[1];
+    var ka = KA_MAP[topic] || {s:'missing', an:'', at:'', gap:'No data available'};
+    var tr = document.createElement('tr');
+
+    // Topic
+    var c0 = document.createElement('td');
+    var b0 = document.createElement('strong'); b0.textContent = topic; c0.appendChild(b0); tr.appendChild(c0);
+
+    // Count
+    var c1 = document.createElement('td');
+    var b1 = document.createElement('strong'); b1.textContent = info.count; c1.appendChild(b1); tr.appendChild(c1);
+
+    // Recommendation badge
+    var c2 = document.createElement('td'); c2.appendChild(recBadge(ka.s)); tr.appendChild(c2);
+
+    // Article
+    var c3 = document.createElement('td');
+    if (ka.an) {
+      var a = document.createElement('a');
+      a.className = 'art-link'; a.target = '_blank';
+      a.href = 'https://help.salesforce.com/s/articleView?id=' + encodeURIComponent(ka.an);
+      a.textContent = '📄 ' + ka.an;
+      var sm = document.createElement('span'); sm.className = 'art-sub'; sm.textContent = ka.at;
+      c3.appendChild(a); c3.appendChild(sm);
+    } else {
+      var na = document.createElement('span'); na.style.cssText = 'color:var(--muted);font-size:.73rem;'; na.textContent = 'No article found'; c3.appendChild(na);
+    }
+    tr.appendChild(c3);
+
+    // Gap
+    var c4 = document.createElement('td');
+    var gt = document.createElement('span'); gt.className = 'gap-tag'; gt.textContent = '⚠ ' + ka.gap;
+    c4.appendChild(gt); tr.appendChild(c4);
+
+    // Engineers
+    var c5 = document.createElement('td');
+    Object.keys(info.engs).forEach(function(eng) { c5.appendChild(mkPill(eng)); });
+    tr.appendChild(c5);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ENGINEER TABLE
+// ============================================================
+function renderEng() {
+  var fc = filteredCases(), fka = filteredKA();
+  var ed = {};
+  fc.forEach(function(c){ if (!ed[c.owner]) ed[c.owner]={mgr:c.manager,cases:0}; ed[c.owner].cases++; });
+  var kae = {};
+  fka.forEach(function(k){ kae[k.author] = kae[k.author] || []; kae[k.author].push(k.title); });
+  var podMap = {};
+  PEOPLE.forEach(function(p){ podMap[p.name] = p.pod; });
+  var maxC = 1;
+  Object.values(ed).forEach(function(e){ if (e.cases > maxC) maxC = e.cases; });
+
+  var body = document.getElementById('bEng');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  Object.entries(ed).sort(function(a,b){ return (kae[b[0]]||[]).length-(kae[a[0]]||[]).length; })
+  .forEach(function(entry) {
+    var eng = entry[0], info = entry[1], ka = kae[eng]||[];
+    var pct = Math.round(info.cases/maxC*100);
+    var tr = document.createElement('tr');
+
+    var t0=document.createElement('td'); var sb=document.createElement('strong'); sb.textContent=eng; t0.appendChild(sb); tr.appendChild(t0);
+    var t1=document.createElement('td'); t1.style.fontSize='.73rem'; t1.textContent=info.mgr; tr.appendChild(t1);
+    var t2=document.createElement('td'); t2.appendChild(mkPill(podMap[eng]||'—')); tr.appendChild(t2);
+    var t3=document.createElement('td'); t3.textContent=info.cases; tr.appendChild(t3);
+
+    var t4=document.createElement('td');
+    var kb=document.createElement('strong'); kb.style.color='var(--brand)'; kb.textContent=ka.length; t4.appendChild(kb); tr.appendChild(t4);
+
+    var t5=document.createElement('td');
+    if (ka.length) { ka.slice(0,2).forEach(function(tt){ var p2=mkPill(tt.length>36?tt.substring(0,34)+'…':tt); p2.title=tt; t5.appendChild(p2); }); }
+    else { var n5=document.createElement('span'); n5.style.cssText='color:var(--muted);font-size:.72rem;'; n5.textContent='None this period'; t5.appendChild(n5); }
+    tr.appendChild(t5);
+
+    var t6=document.createElement('td');
+    var ob=document.createElement('div'); ob.className='pbar';
+    var ib=document.createElement('div'); ib.className='pbar-fill'; ib.style.width=pct+'%';
+    ob.appendChild(ib); t6.appendChild(ob);
+    var lb=document.createElement('span'); lb.style.cssText='font-size:.66rem;color:var(--muted);margin-left:5px;'; lb.textContent=info.cases+' cases'; t6.appendChild(lb);
+    tr.appendChild(t6);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// MANAGER TABLE
+// ============================================================
+function renderMgr() {
+  var fc = filteredCases(), fka = filteredKA();
+  var md = {};
+  fc.forEach(function(c){ if (!md[c.manager]) md[c.manager]={engs:{},cases:0,topics:{}}; md[c.manager].engs[c.owner]=true; md[c.manager].cases++; var t=getTopic(c.subject); md[c.manager].topics[t]=(md[c.manager].topics[t]||0)+1; });
+  var kae = {};
+  fka.forEach(function(k){ kae[k.author]=(kae[k.author]||0)+1; });
+  var lvlMap = {};
+  PEOPLE.forEach(function(p){ lvlMap[p.name]=shortRole(p.title); });
+
+  var body = document.getElementById('bMgr');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  Object.entries(md).sort(function(a,b){return b[1].cases-a[1].cases;}).forEach(function(entry) {
+    var mgr=entry[0], info=entry[1];
+    var mgrKA = Object.keys(info.engs).reduce(function(s,e){ return s+(kae[e]||0); }, 0);
+    var topT  = Object.entries(info.topics).sort(function(a,b){return b[1]-a[1];}).slice(0,3);
+    var vocT  = Object.entries(info.topics).filter(function(t){ var k=KA_MAP[t[0]]; return k&&(k.s==='missing'||k.s==='voc'); }).map(function(t){return t[0];});
+    var tr=document.createElement('tr');
+
+    var t0=document.createElement('td'); var sb=document.createElement('strong'); sb.textContent=mgr; t0.appendChild(sb); tr.appendChild(t0);
+    var t1=document.createElement('td');
+    var lb=document.createElement('span'); lb.style.cssText='font-size:.7rem;background:#f3ebff;color:#6a14d4;border-radius:8px;padding:1px 7px;'; lb.textContent=lvlMap[mgr]||'Manager'; t1.appendChild(lb); tr.appendChild(t1);
+    var t2=document.createElement('td'); t2.textContent=Object.keys(info.engs).length; tr.appendChild(t2);
+    var t3=document.createElement('td'); t3.textContent=info.cases; tr.appendChild(t3);
+    var t4=document.createElement('td'); var kb=document.createElement('strong'); kb.style.color='var(--brand)'; kb.textContent=mgrKA; t4.appendChild(kb); tr.appendChild(t4);
+
+    var t5=document.createElement('td');
+    topT.forEach(function(tt){
+      var p2=mkPill(tt[0]);
+      var k=KA_MAP[tt[0]];
+      if (k&&(k.s==='missing'||k.s==='voc')) { var w=document.createElement('span'); w.style.cssText='font-size:.6rem;color:var(--red);margin-left:2px;'; w.textContent='⚠'; p2.appendChild(w); }
+      t5.appendChild(p2);
+    }); tr.appendChild(t5);
+
+    var t6=document.createElement('td');
+    if (vocT.length) { vocT.forEach(function(vt){ var b=mkBadge(vt,'b-voc'); b.style.margin='2px'; t6.appendChild(b); }); }
+    else { var n6=document.createElement('span'); n6.style.cssText='color:var(--muted);font-size:.72rem;'; n6.textContent='None identified'; t6.appendChild(n6); }
+    tr.appendChild(t6);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// HIERARCHY TABLE (with case + KA counts, clickable rows)
+// ============================================================
+function renderHier() {
+  var cMap={}, kMap={};
+  CASES.forEach(function(c){ cMap[c.owner]=(cMap[c.owner]||0)+1; });
+  KA.forEach(function(k){ kMap[k.author]=(kMap[k.author]||0)+1; });
+
+  var scope = selectedId ? descendants(selectedId) : PEOPLE.map(function(p){return p.id;});
+  var body = document.getElementById('bHier');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  scope.forEach(function(id) {
+    var p = byId[id]; if (!p || p.id==='KDV') return;
+    var mgr = p.mid ? byId[p.mid] : null;
+    var cCount = cMap[p.name]||0, kCount = kMap[p.name]||0;
+    var tr = document.createElement('tr');
+    if (cCount>0||kCount>0) tr.style.background='#f8fcff';
+
+    // Name (clickable → selects in tree)
+    var t0=document.createElement('td');
+    t0.style.cursor='pointer'; t0.title='Click to filter by '+p.name;
+    var av=document.createElement('span'); av.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--light);color:var(--dark);font-size:.56rem;font-weight:700;margin-right:5px;flex-shrink:0;vertical-align:middle;';
+    av.textContent=p.name.split(' ').slice(0,2).map(function(w){return w[0];}).join('');
+    var nm=document.createElement('strong'); nm.textContent=p.name;
+    t0.appendChild(av); t0.appendChild(nm);
+    t0.addEventListener('click', function(){selectNode(id);});
+    tr.appendChild(t0);
+
+    var t1=document.createElement('td');
+    var rb=document.createElement('span'); rb.className='tbadge '+roleClass(p.title); rb.style.cssText='font-size:.66rem;border-radius:8px;padding:2px 7px;'; rb.textContent=shortRole(p.title); t1.appendChild(rb);
+    var sub=document.createElement('div'); sub.style.cssText='font-size:.65rem;color:var(--muted);margin-top:2px;'; sub.textContent=p.title; t1.appendChild(sub);
+    tr.appendChild(t1);
+
+    var t2=document.createElement('td'); t2.style.fontSize='.74rem'; t2.textContent=mgr?mgr.name:'—'; tr.appendChild(t2);
+
+    var t3=document.createElement('td'); t3.appendChild(mkPill(p.pod)); tr.appendChild(t3);
+
+    var t4=document.createElement('td');
+    if (cCount) { var cb=document.createElement('strong'); cb.style.color='var(--brand)'; cb.textContent=cCount; t4.appendChild(cb); } else { t4.textContent='—'; }
+    tr.appendChild(t4);
+
+    var t5=document.createElement('td');
+    if (kCount) { var kb=document.createElement('strong'); kb.style.color='var(--green)'; kb.textContent=kCount; t5.appendChild(kb); } else { t5.textContent='—'; }
+    tr.appendChild(t5);
+
+    var t6=document.createElement('td');
+    var sl=document.createElement('a'); sl.href='https://salesforce.enterprise.slack.com/team/'+encodeURIComponent(p.slack); sl.target='_blank'; sl.style.cssText='color:var(--brand);font-size:.74rem;text-decoration:none;'; sl.textContent='@'+p.slack; t6.appendChild(sl);
+    tr.appendChild(t6);
+
+    body.appendChild(tr);
+  });
+}
+
+// ============================================================
+// TABS
+// ============================================================
+document.querySelectorAll('.tab').forEach(function(tab) {
+  tab.addEventListener('click', function(){
+    var t = tab.getAttribute('data-tab');
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});
+    document.querySelectorAll('.tpanel').forEach(function(x){x.classList.remove('active');});
+    tab.classList.add('active');
+    document.getElementById('tab-'+t).classList.add('active');
+  });
+});
+
+// ============================================================
+// CONTROLS
+// ============================================================
+document.getElementById('btnReset').addEventListener('click', function(){
+  document.getElementById('fSearch').value='';
+  document.getElementById('fKA').value='';
+  document.getElementById('fTopic').value='';
+  document.getElementById('fPod').value='';
+  document.getElementById('fSwarm').value='';
+  document.getElementById('fManager').value='';
+  document.getElementById('fEngineer').value='';
+  clearSelection();
+});
+document.getElementById('btnExpand').addEventListener('click', function(){
+  document.querySelectorAll('.tc').forEach(function(e){e.classList.add('open');});
+  document.querySelectorAll('.ttog').forEach(function(e){if(e.textContent==='▶') e.textContent='▼';});
+});
+document.getElementById('btnCollapse').addEventListener('click', function(){
+  document.querySelectorAll('.tc').forEach(function(e){e.classList.remove('open');});
+  document.querySelectorAll('.ttog').forEach(function(e){if(e.textContent==='▼') e.textContent='▶';});
+});
+document.getElementById('ctxClear').addEventListener('click', clearSelection);
+document.getElementById('tSearch').addEventListener('input', renderTree);
+['fSearch','fKA','fTopic','fPod','fSwarm','fManager','fEngineer'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', renderAll);
+  document.getElementById(id).addEventListener('change', renderAll);
+});
+
+// ============================================================
+// RENDER ALL
+// ============================================================
+function renderAll() {
+  renderKPIs();
+  renderCharts();
+  renderGap();
+  renderEng();
+  renderMgr();
+  renderHier();
+}
+
+renderTree();
+loadData().then(renderAll);
+</script>
+</body>
+</html>
