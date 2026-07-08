@@ -290,15 +290,34 @@ tr:hover td{background:#f5f8fc;}
 // ============================================================
 
 // Populated after fetch; hardcoded as fallback only for PEOPLE hierarchy
-var CASES = [];
-var KA    = [];
+var CASES     = [];
+var KA        = [];
+var SWARM_MAP = {}; // swarmLeadName -> [engineerName, ...]
 
 function loadData() {
   return fetch('data.json?_=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.cases && d.cases.length)  CASES = d.cases;
-      if (d.ka    && d.ka.length)     KA    = d.ka;
+      if (d.cases && d.cases.length) CASES = d.cases;
+      if (d.ka    && d.ka.length)    KA    = d.ka;
+
+      // Build swarm lead → engineers map from live people data
+      if (d.people && d.people.length) {
+        SWARM_MAP = {};
+        d.people.forEach(function(p) {
+          if (!p.swarmLead) return;
+          if (!SWARM_MAP[p.swarmLead]) SWARM_MAP[p.swarmLead] = [];
+          SWARM_MAP[p.swarmLead].push(p.name);
+        });
+        // Repopulate swarm lead dropdown from live data
+        var swarmSel = document.getElementById('fSwarm');
+        while (swarmSel.options.length > 1) swarmSel.remove(1);
+        Object.keys(SWARM_MAP).sort().forEach(function(sl) {
+          var o = document.createElement('option');
+          o.value = sl; o.textContent = sl + ' (' + SWARM_MAP[sl].length + ')';
+          swarmSel.appendChild(o);
+        });
+      }
 
       // Update header window label
       if (d.windowStart && d.windowEnd) {
@@ -581,13 +600,13 @@ function filteredCases() {
     PEOPLE.forEach(function(p) { if (p.pod === podF) podEngs[p.name] = true; });
   }
 
-  // swarm lead → set of descendant names (engineers under that swarm lead's reporting chain)
+  // swarm lead → engineers from live OrgCS data
   var swarmEngs = null;
   if (swarmF) {
-    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
-    if (swarmPerson) {
+    var engList = SWARM_MAP[swarmF] || [];
+    if (engList.length) {
       swarmEngs = {};
-      descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n] = true; });
+      engList.forEach(function(n){ swarmEngs[n] = true; });
     }
   }
 
@@ -628,8 +647,8 @@ function filteredKA() {
   }
   var swarmEngs = null;
   if (swarmF) {
-    var swarmPerson = PEOPLE.filter(function(p){ return p.name === swarmF; })[0];
-    if (swarmPerson) { swarmEngs = {}; descNames(swarmPerson.id).forEach(function(n){ swarmEngs[n]=true; }); }
+    var engList2 = SWARM_MAP[swarmF] || [];
+    if (engList2.length) { swarmEngs = {}; engList2.forEach(function(n){ swarmEngs[n]=true; }); }
   }
   var mgrEngs = null;
   if (mgrF) {
