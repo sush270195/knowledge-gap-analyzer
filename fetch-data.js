@@ -95,16 +95,16 @@ async function main() {
     };
   });
 
-  console.log('[fetch] Querying People (Swarm Lead assignments)...');
-  const peopleRecords = await sfQuery(
-    'SELECT Name, Swarm_Lead__r.Name ' +
-    'FROM User ' +
-    'WHERE IsActive = true ' +
-    'AND Swarm_Lead__c != null ' +
-    'LIMIT 5000'
+  console.log('[fetch] Querying People (Swarm Lead assignments, A-M)...');
+  const peopleA = await sfQuery(
+    "SELECT Name, Swarm_Lead__r.Name FROM User WHERE IsActive = true AND Swarm_Lead__c != null AND Name < 'N' ORDER BY Name LIMIT 5000"
+  );
+  console.log('[fetch] Querying People (Swarm Lead assignments, N-Z)...');
+  const peopleB = await sfQuery(
+    "SELECT Name, Swarm_Lead__r.Name FROM User WHERE IsActive = true AND Swarm_Lead__c != null AND Name >= 'N' ORDER BY Name LIMIT 5000"
   );
 
-  const people = peopleRecords.map(function(r) {
+  const people = peopleA.concat(peopleB).map(function(r) {
     return {
       name:      r.Name,
       swarmLead: r.Swarm_Lead__r ? r.Swarm_Lead__r.Name : ''
