@@ -111,6 +111,7 @@ tr:hover td{background:#f5f8fc;}
 .b-voc{background:#f3ebff;color:#6a14d4;border:1px solid #c7a8f9;}
 .b-ok{background:#eaf5ea;color:#1a6d2a;border:1px solid #a8d5a9;}
 .b-upd{background:#fff5e0;color:#9a5300;border:1px solid #ffd080;}
+.b-draft{background:#f0f0f0;color:#444;border:1px solid #ccc;}
 .pill{display:inline-block;background:var(--light);color:var(--dark);border-radius:10px;padding:1px 7px;font-size:.66rem;font-weight:600;margin:1px;}
 .gap-tag{font-size:.68rem;color:var(--red);background:#fde8e8;border-radius:3px;padding:1px 5px;display:block;margin-top:2px;}
 .art-link{color:var(--brand);text-decoration:none;font-size:.73rem;}
@@ -200,7 +201,7 @@ tr:hover td{background:#f5f8fc;}
       <div class="kpi"><div class="v" id="kMiss">—</div><div class="l">New KA Needed</div></div>
       <div class="kpi"><div class="v" id="kPart">—</div><div class="l">Needs Update</div></div>
       <div class="kpi"><div class="v" id="kVOC">—</div><div class="l">VOC Signals</div></div>
-      <div class="kpi"><div class="v" id="kKA">—</div><div class="l">KA Created</div></div>
+      <div class="kpi"><div class="v" id="kKA">—</div><div id="kKADraft" style="font-size:.67rem;color:var(--muted);"></div><div class="l">KA Created</div></div>
       <div class="kpi"><div class="v" id="kEngs">—</div><div class="l">Engineers</div></div>
     </div>
 
@@ -226,14 +227,14 @@ tr:hover td{background:#f5f8fc;}
             </div>
           </div>
           <div class="card">
-            <div class="ch"><h4>KA Created by Engineer (30d)</h4></div>
+            <div class="ch"><h4>KA Created by Engineer (30d)</h4><span>Green = Published · Grey = Draft</span></div>
             <div class="cw"><canvas id="cKA"></canvas></div>
           </div>
         </div>
         <div class="card tw">
           <table id="tGap">
             <thead><tr>
-              <th>Topic</th><th>Cases</th><th>Recommendation</th>
+              <th>Topic</th><th>#</th><th>Case Numbers</th><th>Recommendation</th>
               <th>Existing Article</th><th>Gap / What's Missing</th><th>Engineers</th>
             </tr></thead>
             <tbody id="bGap"></tbody>
@@ -247,7 +248,7 @@ tr:hover td{background:#f5f8fc;}
           <table>
             <thead><tr>
               <th>Engineer</th><th>Manager</th><th>Pod</th>
-              <th>Cases</th><th>KA Created</th><th>KA Article Topics</th><th>Case Load</th>
+              <th>Cases</th><th>KA Published</th><th>KA Draft</th><th>KA Article Topics</th><th>Case Load</th>
             </tr></thead>
             <tbody id="bEng"></tbody>
           </table>
@@ -766,7 +767,10 @@ function renderKPIs() {
   document.getElementById('kMiss').textContent   = miss;
   document.getElementById('kPart').textContent   = part;
   document.getElementById('kVOC').textContent    = voc;
-  document.getElementById('kKA').textContent     = fka.length;
+  var kaPub   = fka.filter(function(k){ return !k.status || k.status==='Online'; }).length;
+  var kaDraft = fka.length - kaPub;
+  document.getElementById('kKA').textContent      = fka.length;
+  document.getElementById('kKADraft').textContent = kaDraft ? kaPub + ' pub · ' + kaDraft + ' draft' : (kaPub ? kaPub + ' published' : '');
   document.getElementById('kEngs').textContent   = Object.keys(engs).length;
 }
 
@@ -802,16 +806,33 @@ function renderCharts() {
     }
   });
 
-  // KA donut
-  var ec = {};
-  fka.forEach(function(k){ ec[k.author] = (ec[k.author]||0)+1; });
-  var ee = Object.entries(ec).sort(function(a,b){return b[1]-a[1];});
+  // KA bar chart — Published vs Draft per engineer
+  var ecPub = {}, ecDraft = {};
+  fka.forEach(function(k) {
+    if (!k.status || k.status === 'Online') ecPub[k.author]   = (ecPub[k.author]||0)+1;
+    else                                    ecDraft[k.author] = (ecDraft[k.author]||0)+1;
+  });
+  var allAuthors = Array.from(new Set(Object.keys(ecPub).concat(Object.keys(ecDraft))))
+    .sort(function(a,b){ return ((ecPub[b]||0)+(ecDraft[b]||0))-((ecPub[a]||0)+(ecDraft[a]||0)); });
   if (charts.k) charts.k.destroy();
-  if (ee.length) {
+  if (allAuthors.length) {
     charts.k = new Chart(document.getElementById('cKA'), {
-      type: 'doughnut',
-      data: { labels: ee.map(function(e){return e[0];}), datasets: [{ data: ee.map(function(e){return e[1];}), backgroundColor: pal.slice(0,ee.length), borderWidth: 2 }] },
-      options: { plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 12 } } } }
+      type: 'bar',
+      data: {
+        labels: allAuthors,
+        datasets: [
+          { label: 'Published', data: allAuthors.map(function(a){ return ecPub[a]||0; }),   backgroundColor: '#2e844a', borderRadius: 3 },
+          { label: 'Draft',     data: allAuthors.map(function(a){ return ecDraft[a]||0; }), backgroundColor: '#adb5bd', borderRadius: 3 }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } } },
+        scales: {
+          x: { stacked: true, ticks: { font: { size: 10 } } },
+          y: { stacked: true, ticks: { font: { size: 9 } } }
+        }
+      }
     });
   }
 }
@@ -819,17 +840,25 @@ function renderCharts() {
 // ============================================================
 // GAP TABLE
 // ============================================================
+var ORGCS_BASE = 'https://orgcs.my.salesforce.com';
+
 function renderGap() {
   var fc = filteredCases();
   var td = {};
-  fc.forEach(function(c){ var t=getTopic(c.subject, c.topic); if(!td[t]) td[t]={count:0,engs:{}}; td[t].count++; td[t].engs[c.owner]=true; });
+  fc.forEach(function(c) {
+    var t = getTopic(c.subject, c.topic);
+    if (!td[t]) td[t] = {count:0, engs:{}, cases:[]};
+    td[t].count++;
+    td[t].engs[c.owner] = true;
+    td[t].cases.push({num: c.num, id: c.id, subject: c.subject});
+  });
   var rows = Object.entries(td).sort(function(a,b){return b[1].count-a[1].count;});
   var body = document.getElementById('bGap');
   while (body.firstChild) body.removeChild(body.firstChild);
 
   if (!rows.length) {
     var etr = document.createElement('tr'); var etd = document.createElement('td');
-    etd.colSpan = 6; etd.className = 'empty-row'; etd.textContent = 'No cases match the current filters.';
+    etd.colSpan = 7; etd.className = 'empty-row'; etd.textContent = 'No cases match the current filters.';
     etr.appendChild(etd); body.appendChild(etr); return;
   }
 
@@ -846,18 +875,39 @@ function renderGap() {
     var c1 = document.createElement('td');
     var b1 = document.createElement('strong'); b1.textContent = info.count; c1.appendChild(b1); tr.appendChild(c1);
 
+    // Case numbers — links to OrgCS
+    var c1b = document.createElement('td');
+    c1b.style.maxWidth = '220px';
+    info.cases.forEach(function(cs) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-bottom:2px;';
+      if (cs.id) {
+        var a = document.createElement('a');
+        a.className = 'art-link'; a.target = '_blank';
+        a.href = ORGCS_BASE + '/' + cs.id;
+        a.textContent = cs.num;
+        a.title = cs.subject;
+        wrap.appendChild(a);
+      } else {
+        var sp = document.createElement('span'); sp.style.fontSize='.72rem'; sp.textContent = cs.num;
+        wrap.appendChild(sp);
+      }
+      c1b.appendChild(wrap);
+    });
+    tr.appendChild(c1b);
+
     // Recommendation badge
     var c2 = document.createElement('td'); c2.appendChild(recBadge(ka.s)); tr.appendChild(c2);
 
-    // Article
+    // Existing article — OrgCS internal knowledge URL
     var c3 = document.createElement('td');
     if (ka.an) {
-      var a = document.createElement('a');
-      a.className = 'art-link'; a.target = '_blank';
-      a.href = 'https://help.salesforce.com/s/articleView?id=' + encodeURIComponent(ka.an);
-      a.textContent = '📄 ' + ka.an;
+      var a2 = document.createElement('a');
+      a2.className = 'art-link'; a2.target = '_blank';
+      a2.href = ORGCS_BASE + '/articles/Knowledge/' + ka.an;
+      a2.textContent = '📄 ' + ka.an;
       var sm = document.createElement('span'); sm.className = 'art-sub'; sm.textContent = ka.at;
-      c3.appendChild(a); c3.appendChild(sm);
+      c3.appendChild(a2); c3.appendChild(sm);
     } else {
       var na = document.createElement('span'); na.style.cssText = 'color:var(--muted);font-size:.73rem;'; na.textContent = 'No article found'; c3.appendChild(na);
     }
@@ -880,12 +930,39 @@ function renderGap() {
 // ============================================================
 // ENGINEER TABLE
 // ============================================================
+function norm(n){ return (n||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+
 function renderEng() {
   var fc = filteredCases(), fka = filteredKA();
+
+  // Build case-owner data keyed by display name
   var ed = {};
   fc.forEach(function(c){ if (!ed[c.owner]) ed[c.owner]={mgr:c.manager,cases:0}; ed[c.owner].cases++; });
-  var kae = {};
-  fka.forEach(function(k){ kae[k.author] = kae[k.author] || []; kae[k.author].push(k.title); });
+
+  // Build KA buckets keyed by normalised name → canonical display name
+  var normToDisplay = {};  // norm(author) → first seen display name
+  var kaePub = {}, kaeDraft = {};
+  fka.forEach(function(k) {
+    var key = norm(k.author);
+    if (!normToDisplay[key]) normToDisplay[key] = k.author;
+    var bucket = (!k.status || k.status === 'Online') ? kaePub : kaeDraft;
+    bucket[key] = bucket[key] || [];
+    bucket[key].push(k.title);
+  });
+
+  // Build a norm→display map for case owners too
+  var ownerNorm = {};
+  Object.keys(ed).forEach(function(n){ ownerNorm[norm(n)] = n; });
+
+  // Merged set: all engineer display names that appear in cases OR KAs
+  var allNames = {};
+  Object.keys(ed).forEach(function(n){ allNames[n] = true; });
+  Object.keys(normToDisplay).forEach(function(key) {
+    // prefer the case-owner display name if it matches, else use KA author name
+    var display = ownerNorm[key] || normToDisplay[key];
+    allNames[display] = true;
+  });
+
   var podMap = {};
   PEOPLE.forEach(function(p){ podMap[p.name] = p.pod; });
   var maxC = 1;
@@ -894,9 +971,20 @@ function renderEng() {
   var body = document.getElementById('bEng');
   while (body.firstChild) body.removeChild(body.firstChild);
 
-  Object.entries(ed).sort(function(a,b){ return (kae[b[0]]||[]).length-(kae[a[0]]||[]).length; })
-  .forEach(function(entry) {
-    var eng = entry[0], info = entry[1], ka = kae[eng]||[];
+  // sort: most total KA first, then most cases
+  Object.keys(allNames).sort(function(a,b){
+    var ka = norm(a), kb2 = norm(b);
+    var ta = (kaePub[ka]||[]).length + (kaeDraft[ka]||[]).length;
+    var tb = (kaePub[kb2]||[]).length + (kaeDraft[kb2]||[]).length;
+    var ca = ed[a] ? ed[a].cases : 0, cb = ed[b] ? ed[b].cases : 0;
+    return (tb - ta) || (cb - ca);
+  })
+  .forEach(function(eng) {
+    var info  = ed[eng] || {mgr:'—', cases:0};
+    var key   = norm(eng);
+    var pub   = kaePub[key]   || [];
+    var draft = kaeDraft[key] || [];
+    var allKA = pub.concat(draft);
     var pct = Math.round(info.cases/maxC*100);
     var tr = document.createElement('tr');
 
@@ -905,12 +993,34 @@ function renderEng() {
     var t2=document.createElement('td'); t2.appendChild(mkPill(podMap[eng]||'—')); tr.appendChild(t2);
     var t3=document.createElement('td'); t3.textContent=info.cases; tr.appendChild(t3);
 
+    // Published KA count
     var t4=document.createElement('td');
-    var kb=document.createElement('strong'); kb.style.color='var(--brand)'; kb.textContent=ka.length; t4.appendChild(kb); tr.appendChild(t4);
+    if (pub.length) { var kb=document.createElement('strong'); kb.style.color='var(--green)'; kb.textContent=pub.length; t4.appendChild(kb); }
+    else { t4.textContent='—'; }
+    tr.appendChild(t4);
 
+    // Draft KA count
+    var t4d=document.createElement('td');
+    if (draft.length) { var kd=document.createElement('strong'); kd.style.color='var(--muted)'; kd.textContent=draft.length; t4d.appendChild(kd); }
+    else { t4d.textContent='—'; }
+    tr.appendChild(t4d);
+
+    // Article topic pills (show up to 2, prefer published first)
     var t5=document.createElement('td');
-    if (ka.length) { ka.slice(0,2).forEach(function(tt){ var p2=mkPill(tt.length>36?tt.substring(0,34)+'…':tt); p2.title=tt; t5.appendChild(p2); }); }
-    else { var n5=document.createElement('span'); n5.style.cssText='color:var(--muted);font-size:.72rem;'; n5.textContent='None this period'; t5.appendChild(n5); }
+    if (allKA.length) {
+      pub.slice(0,2).forEach(function(tt){
+        var p2=mkPill(tt.length>36?tt.substring(0,34)+'…':tt); p2.title=tt;
+        p2.style.background='#eaf5ea'; p2.style.color='#1a6d2a';
+        t5.appendChild(p2);
+      });
+      draft.slice(0, Math.max(0, 2-pub.length)).forEach(function(tt){
+        var p2=mkPill(tt.length>36?tt.substring(0,34)+'…':tt); p2.title=tt+' (Draft)';
+        p2.style.background='#f0f0f0'; p2.style.color='#444';
+        t5.appendChild(p2);
+      });
+    } else {
+      var n5=document.createElement('span'); n5.style.cssText='color:var(--muted);font-size:.72rem;'; n5.textContent='None this period'; t5.appendChild(n5);
+    }
     tr.appendChild(t5);
 
     var t6=document.createElement('td');
@@ -931,8 +1041,12 @@ function renderMgr() {
   var fc = filteredCases(), fka = filteredKA();
   var md = {};
   fc.forEach(function(c){ if (!md[c.manager]) md[c.manager]={engs:{},cases:0,topics:{}}; md[c.manager].engs[c.owner]=true; md[c.manager].cases++; var t=getTopic(c.subject, c.topic); md[c.manager].topics[t]=(md[c.manager].topics[t]||0)+1; });
-  var kae = {};
-  fka.forEach(function(k){ kae[k.author]=(kae[k.author]||0)+1; });
+  var kaePub = {}, kaeDraft = {};
+  fka.forEach(function(k) {
+    var key = norm(k.author);
+    if (!k.status || k.status === 'Online') kaePub[key]   = (kaePub[key]||0)+1;
+    else                                    kaeDraft[key] = (kaeDraft[key]||0)+1;
+  });
   var lvlMap = {};
   PEOPLE.forEach(function(p){ lvlMap[p.name]=shortRole(p.title); });
 
@@ -941,7 +1055,8 @@ function renderMgr() {
 
   Object.entries(md).sort(function(a,b){return b[1].cases-a[1].cases;}).forEach(function(entry) {
     var mgr=entry[0], info=entry[1];
-    var mgrKA = Object.keys(info.engs).reduce(function(s,e){ return s+(kae[e]||0); }, 0);
+    var mgrPub   = Object.keys(info.engs).reduce(function(s,e){ return s+(kaePub[norm(e)]||0); }, 0);
+    var mgrDraft = Object.keys(info.engs).reduce(function(s,e){ return s+(kaeDraft[norm(e)]||0); }, 0);
     var topT  = Object.entries(info.topics).sort(function(a,b){return b[1]-a[1];}).slice(0,3);
     var vocT  = Object.entries(info.topics).filter(function(t){ var k=KA_MAP[t[0]]; return k&&(k.s==='missing'||k.s==='voc'); }).map(function(t){return t[0];});
     var tr=document.createElement('tr');
@@ -951,7 +1066,16 @@ function renderMgr() {
     var lb=document.createElement('span'); lb.style.cssText='font-size:.7rem;background:#f3ebff;color:#6a14d4;border-radius:8px;padding:1px 7px;'; lb.textContent=lvlMap[mgr]||'Manager'; t1.appendChild(lb); tr.appendChild(t1);
     var t2=document.createElement('td'); t2.textContent=Object.keys(info.engs).length; tr.appendChild(t2);
     var t3=document.createElement('td'); t3.textContent=info.cases; tr.appendChild(t3);
-    var t4=document.createElement('td'); var kb=document.createElement('strong'); kb.style.color='var(--brand)'; kb.textContent=mgrKA; t4.appendChild(kb); tr.appendChild(t4);
+
+    // KA Published + Draft in one cell
+    var t4=document.createElement('td');
+    if (mgrPub) { var kb=document.createElement('strong'); kb.style.color='var(--green)'; kb.textContent=mgrPub; t4.appendChild(kb); }
+    if (mgrDraft) {
+      if (mgrPub) { var sep=document.createTextNode(' / '); t4.appendChild(sep); }
+      var kd=document.createElement('span'); kd.style.color='var(--muted)'; kd.title='Draft'; kd.textContent=mgrDraft+' draft'; t4.appendChild(kd);
+    }
+    if (!mgrPub && !mgrDraft) t4.textContent='—';
+    tr.appendChild(t4);
 
     var t5=document.createElement('td');
     topT.forEach(function(tt){
@@ -974,9 +1098,13 @@ function renderMgr() {
 // HIERARCHY TABLE (with case + KA counts, clickable rows)
 // ============================================================
 function renderHier() {
-  var cMap={}, kMap={};
+  var cMap={}, kPubMap={}, kDraftMap={};
   CASES.forEach(function(c){ cMap[c.owner]=(cMap[c.owner]||0)+1; });
-  KA.forEach(function(k){ kMap[k.author]=(kMap[k.author]||0)+1; });
+  KA.forEach(function(k) {
+    var key = norm(k.author);
+    if (!k.status || k.status === 'Online') kPubMap[key]   = (kPubMap[key]||0)+1;
+    else                                    kDraftMap[key] = (kDraftMap[key]||0)+1;
+  });
 
   var scope = selectedId ? descendants(selectedId) : PEOPLE.map(function(p){return p.id;});
   var body = document.getElementById('bHier');
@@ -985,9 +1113,9 @@ function renderHier() {
   scope.forEach(function(id) {
     var p = byId[id]; if (!p || p.id==='KDV') return;
     var mgr = p.mid ? byId[p.mid] : null;
-    var cCount = cMap[p.name]||0, kCount = kMap[p.name]||0;
+    var cCount = cMap[p.name]||0, kPub = kPubMap[norm(p.name)]||0, kDraft = kDraftMap[norm(p.name)]||0;
     var tr = document.createElement('tr');
-    if (cCount>0||kCount>0) tr.style.background='#f8fcff';
+    if (cCount>0||kPub>0||kDraft>0) tr.style.background='#f8fcff';
 
     // Name (clickable → selects in tree)
     var t0=document.createElement('td');
@@ -1013,7 +1141,12 @@ function renderHier() {
     tr.appendChild(t4);
 
     var t5=document.createElement('td');
-    if (kCount) { var kb=document.createElement('strong'); kb.style.color='var(--green)'; kb.textContent=kCount; t5.appendChild(kb); } else { t5.textContent='—'; }
+    if (kPub) { var kb=document.createElement('strong'); kb.style.color='var(--green)'; kb.textContent=kPub; t5.appendChild(kb); }
+    if (kDraft) {
+      if (kPub) t5.appendChild(document.createTextNode(' / '));
+      var kd=document.createElement('span'); kd.style.color='var(--muted)'; kd.title='Draft'; kd.textContent=kDraft+' draft'; t5.appendChild(kd);
+    }
+    if (!kPub && !kDraft) t5.textContent='—';
     tr.appendChild(t5);
 
     var t6=document.createElement('td');

@@ -56,7 +56,7 @@ async function main() {
 
   console.log('[fetch] Querying Cases (' + startDT.slice(0,10) + ' to ' + endDT.slice(0,10) + ')...');
   const caseRecords = await sfQuery(
-    'SELECT CaseNumber, Subject, Owner.Name, CaseReportingTaxonomy__r.Name, Status, CreatedDate ' +
+    'SELECT Id, CaseNumber, Subject, Owner.Name, CaseReportingTaxonomy__r.Name, Status, CreatedDate ' +
     'FROM Case ' +
     'WHERE ' + dateFilter + ' ' +
     'AND CaseReportingTaxonomy__c != null ' +
@@ -67,6 +67,7 @@ async function main() {
 
   const cases = caseRecords.map(function(r) {
     return {
+      id:      r.Id || '',
       num:     r.CaseNumber,
       subject: r.Subject || '',
       owner:   r.Owner ? r.Owner.Name : '',
@@ -78,9 +79,9 @@ async function main() {
 
   console.log('[fetch] Querying KA articles (' + startDT.slice(0,10) + ' to ' + endDT.slice(0,10) + ')...');
   const kaRecords = await sfQuery(
-    "SELECT ArticleNumber, Title, CreatedBy.Name, CreatedDate " +
+    "SELECT Id, ArticleNumber, Title, CreatedBy.Name, CreatedDate, PublishStatus " +
     "FROM KnowledgeArticleVersion " +
-    "WHERE PublishStatus = 'Online' " +
+    "WHERE PublishStatus IN ('Online', 'Draft', 'Archived') " +
     "AND " + dateFilter + " " +
     "ORDER BY CreatedDate DESC " +
     "LIMIT 5000"
@@ -88,10 +89,12 @@ async function main() {
 
   const ka = kaRecords.map(function(r) {
     return {
+      id:     r.Id || '',
       num:    r.ArticleNumber,
       title:  r.Title || '',
       author: r.CreatedBy ? r.CreatedBy.Name : '',
-      date:   r.CreatedDate || ''
+      date:   r.CreatedDate || '',
+      status: r.PublishStatus || ''
     };
   });
 
