@@ -833,7 +833,7 @@ function renderGap() {
     if (ka.an) {
       var a = document.createElement('a');
       a.className = 'art-link'; a.target = '_blank';
-      a.href = 'https://help.salesforce.com/s/articleView?id=' + encodeURIComponent(ka.an);
+      a.href = 'https://orgcs.my.salesforce.com/articles/Knowledge/' + encodeURIComponent(ka.an);
       a.textContent = '📄 ' + ka.an;
       var sm = document.createElement('span'); sm.className = 'art-sub'; sm.textContent = ka.at;
       c3.appendChild(a); c3.appendChild(sm);
