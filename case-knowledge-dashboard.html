@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Case Knowledge Gap Dashboard – Krishna Org</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --brand:#0176d3;       --brand-dark:#014486;  --brand-light:#e8f4ff;
+    --brand-mid:#0a5ea8;
+    --success:#2e844a;     --success-light:#e6f5eb; --success-mid:#1d7a3a;
+    --warning:#dd7a01;     --warning-light:#fff8ed;
+    --danger:#c23934;      --danger-light:#fff0ef;
+    --voc:#7526e3;         --voc-light:#f3eeff;
+    --bg:#eef1f6;
+    --card:#ffffff;
+    --border:#dde2eb;
+    --border-light:#eef1f6;
+    --text:#0f1526;        --text-muted:#5a6278;   --text-light:#8a93a8;
+    --radius:12px;         --radius-sm:8px;        --radius-xs:6px;
+    --shadow-sm:0 1px 3px rgba(15,21,38,.06),0 1px 2px rgba(15,21,38,.04);
+    --shadow:0 4px 16px rgba(15,21,38,.08),0 1px 4px rgba(15,21,38,.05);
+    --shadow-lg:0 8px 32px rgba(15,21,38,.12),0 2px 8px rgba(15,21,38,.06);
+    --header-h:64px;
+    --filter-h:56px;
+  }
+
+  *, *::before, *::after{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,Arial,sans-serif;
+    background:var(--bg);color:var(--text);font-size:13.5px;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+
+  /* ────────────────────────────────────────────────────────── HEADER */
+  header{
+    background:linear-gradient(120deg,#011e3e 0%,#012f5c 35%,#014486 65%,#0176d3 100%);
+    color:#fff;height:var(--header-h);padding:0 32px;
+    display:flex;align-items:center;gap:14px;
+    box-shadow:0 2px 20px rgba(0,0,0,.28);
+    position:sticky;top:0;z-index:200;
+  }
+  header::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);
+  }
+  .hdr-logo{
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.08));
+    border:1px solid rgba(255,255,255,.2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;flex-shrink:0;backdrop-filter:blur(4px);
+  }
+  .hdr-text h1{font-size:1rem;font-weight:700;letter-spacing:-.015em;line-height:1.2;}
+  .hdr-text p{font-size:.72rem;color:rgba(255,255,255,.62);margin-top:2px;letter-spacing:.01em;}
+  .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .hdr-chip{
+    display:flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+    border-radius:20px;padding:4px 12px;font-size:.68rem;font-weight:600;
+    color:rgba(255,255,255,.8);letter-spacing:.04em;
+  }
+  .live-badge{
+    background:rgba(46,196,98,.15);border:1px solid rgba(46,196,98,.35);
+    border-radius:20px;padding:4px 12px;font-size:.68rem;font-weight:700;
+    letter-spacing:.08em;color:#5de080;display:flex;align-items:center;gap:6px;
+  }
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#3de076;
+    box-shadow:0 0 6px #3de076;animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.85);}}
+
+  /* ────────────────────────────────────────────────────────── FILTER BAR */
+  .filter-bar{
+    background:rgba(255,255,255,.92);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    padding:0 32px;
+    height:var(--filter-h);
+    display:flex;gap:8px;align-items:center;
+    box-shadow:0 1px 0 var(--border),0 2px 8px rgba(15,21,38,.04);
+    position:sticky;top:var(--header-h);z-index:100;
+    overflow-x:auto;
+  }
+  .filter-bar::-webkit-scrollbar{height:0;}
+  .fg{
+    display:flex;align-items:center;gap:0;
+    background:var(--card);
+    border:1px solid var(--border);border-radius:var(--radius-sm);
+    overflow:hidden;
+    flex-shrink:0;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  .fg:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(1,118,211,.12);}
+  .fg-label{
+    padding:0 10px 0 12px;font-size:.66rem;font-weight:700;
+    color:var(--text-light);text-transform:uppercase;letter-spacing:.08em;
+    white-space:nowrap;border-right:1px solid var(--border-light);
+    line-height:32px;height:32px;background:#f8f9fc;
+  }
+  .fg select{
+    border:none;background:transparent;padding:0 28px 0 10px;
+    font-size:.8rem;color:var(--text);cursor:pointer;outline:none;
+    height:32px;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6278'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 8px center;
+    min-width:140px;font-family:inherit;font-weight:500;
+  }
+  .fg select:focus{color:var(--brand);}
+  .fg select option{color:var(--text);}
+  .btn-reset{
+    margin-left:auto;flex-shrink:0;
+    background:linear-gradient(135deg,var(--brand),var(--brand-mid));
+    border:none;color:#fff;
+    border-radius:var(--radius-sm);padding:0 16px;height:32px;
+    cursor:pointer;font-size:.75rem;font-weight:700;font-family:inherit;
+    letter-spacing:.02em;
+    transition:transform .12s,box-shadow .12s,opacity .12s;
+    box-shadow:0 2px 8px rgba(1,118,211,.35);
+    display:flex;align-items:center;gap:6px;
+  }
+  .btn-reset:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 14px rgba(1,118,211,.45);}
+  .btn-reset:active{transform:translateY(0);box-shadow:none;}
+  .btn-reset svg{width:13px;height:13px;}
+
+  /* ────────────────────────────────────────────────────────── KPI STRIP */
+  .kpi-row{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:14px;
+    padding:20px 32px 4px;
+  }
+  .kpi{
+    background:var(--card);border-radius:var(--radius);
+    padding:16px 18px 14px;border:1px solid var(--border);
+    box-shadow:var(--shadow-sm);
+    display:flex;flex-direction:column;gap:6px;
+    position:relative;overflow:hidden;
+    transition:transform .15s,box-shadow .15s;
+  }
+  .kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+  .kpi::after{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .kpi.kpi-blue::after  {background:linear-gradient(90deg,#0176d3,#52a9f5);}
+  .kpi.kpi-green::after {background:linear-gradient(90deg,#2e844a,#4bc268);}
+  .kpi.kpi-orange::after{background:linear-gradient(90deg,#dd7a01,#f5a623);}
+  .kpi.kpi-red::after   {background:linear-gradient(90deg,#c23934,#e05c58);}
+  .kpi.kpi-purple::after{background:linear-gradient(90deg,#7526e3,#a76cf0);}
+  .kpi-header{display:flex;align-items:center;justify-content:space-between;}
+  .kpi-icon{
+    width:32px;height:32px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;font-size:15px;
+  }
+  .kpi.kpi-blue   .kpi-icon{background:#e8f4ff;color:#0176d3;}
+  .kpi.kpi-green  .kpi-icon{background:#e6f5eb;color:#2e844a;}
+  .kpi.kpi-orange .kpi-icon{background:#fff8ed;color:#dd7a01;}
+  .kpi.kpi-red    .kpi-icon{background:#fff0ef;color:#c23934;}
+  .kpi.kpi-purple .kpi-icon{background:#f3eeff;color:#7526e3;}
+  .kpi .val{
+    font-size:2rem;font-weight:800;line-height:1;letter-spacing:-.03em;
+    color:var(--text);margin-top:4px;
+  }
+  .kpi .lbl{font-size:.64rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.07em;line-height:1.3;}
+
+  /* ────────────────────────────────────────────────────────── MAIN GRID */
+  .main{padding:16px 32px 40px;display:grid;gap:18px;}
+
+  .card{
+    background:var(--card);border-radius:var(--radius);
+    border:1px solid var(--border);box-shadow:var(--shadow-sm);overflow:hidden;
+    transition:box-shadow .2s;
+  }
+  .card:hover{box-shadow:var(--shadow);}
+
+  .card-head{
+    padding:14px 20px;border-bottom:1px solid var(--border-light);
+    display:flex;align-items:center;gap:10px;
+    background:linear-gradient(180deg,#fcfcff 0%,var(--card) 100%);
+  }
+  .card-head h2{font-size:.88rem;font-weight:700;color:var(--text);letter-spacing:-.01em;}
+  .card-meta{
+    font-size:.68rem;color:var(--text-light);margin-left:auto;
+    background:var(--bg);padding:3px 10px;border-radius:20px;
+    border:1px solid var(--border);font-weight:500;
+  }
+
+  .charts-row{display:grid;grid-template-columns:3fr 2fr;gap:18px;}
+  .chart-wrap{padding:16px 20px 12px;}
+  canvas{max-height:260px;}
+
+  /* ────────────────────────────────────────────────────────── TABS */
+  .tabs{
+    display:flex;padding:0 20px;gap:2px;
+    background:var(--bg);
+    border-bottom:2px solid var(--border);
+  }
+  .tab{
+    padding:10px 20px;cursor:pointer;font-size:.8rem;font-weight:600;
+    color:var(--text-muted);border-bottom:3px solid transparent;margin-bottom:-2px;
+    transition:color .15s,background .15s;border-radius:var(--radius-xs) var(--radius-xs) 0 0;
+    letter-spacing:.01em;
+  }
+  .tab:hover{background:rgba(1,118,211,.06);color:var(--brand);}
+  .tab.active{
+    color:var(--brand);border-bottom-color:var(--brand);
+    background:var(--card);
+  }
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+
+  /* ────────────────────────────────────────────────────────── TABLES */
+  .tbl-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  thead{position:sticky;top:calc(var(--header-h) + var(--filter-h));z-index:10;}
+  th{
+    background:#f4f6fa;text-align:left;padding:9px 16px;
+    border-bottom:2px solid var(--border);font-weight:700;color:var(--text-muted);
+    font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;
+    cursor:pointer;user-select:none;white-space:nowrap;
+    transition:background .1s,color .1s;
+  }
+  th:hover{background:#eaeff7;color:var(--brand);}
+  th span{opacity:.45;font-size:.62rem;margin-left:3px;}
+  td{
+    padding:11px 16px;border-bottom:1px solid var(--border-light);
+    vertical-align:middle;line-height:1.45;color:var(--text);
+  }
+  tbody tr{transition:background .1s;}
+  tbody tr:hover td{background:#f5f8ff;}
+  tr:last-child td{border-bottom:none;}
+
+  /* left accent stripe */
+  tbody tr.row-missing td:first-child{border-left:3px solid var(--warning);}
+  tbody tr.row-gap     td:first-child{border-left:3px solid var(--danger);}
+  tbody tr.row-voc     td:first-child{border-left:3px solid var(--voc);}
+  tbody tr.row-ok      td:first-child{border-left:3px solid var(--success);}
+
+  /* zebra light */
+  tbody tr:nth-child(even) td{background:#fafbfd;}
+  tbody tr:nth-child(even):hover td{background:#f5f8ff;}
+
+  /* ────────────────────────────────────────────────────────── BADGES */
+  .badge{
+    display:inline-flex;align-items:center;gap:4px;
+    border-radius:20px;padding:3px 10px;
+    font-size:.65rem;font-weight:700;letter-spacing:.04em;white-space:nowrap;
+  }
+  .badge-new    {background:#fff3e0;color:#e65100;border:1px solid #ffcc80;}
+  .badge-partial{background:#fff8e1;color:#f57c00;border:1px solid #ffe082;}
+  .badge-voc    {background:#f3eeff;color:#7526e3;border:1px solid #ce93d8;}
+  .badge-ok     {background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;}
+
+  /* ────────────────────────────────────────────────────────── MISC */
+  .art-link{
+    color:var(--brand);text-decoration:none;font-size:.76rem;font-weight:600;
+    display:inline-flex;align-items:center;gap:4px;
+    transition:color .1s;
+  }
+  .art-link::after{content:'↗';font-size:.6rem;opacity:.7;}
+  .art-link:hover{color:var(--brand-dark);text-decoration:underline;}
+
+  .missing-tag{
+    font-size:.68rem;color:#b71c1c;background:#ffebee;
+    border-radius:var(--radius-xs);padding:2px 8px;display:inline-block;margin-top:3px;line-height:1.5;
+    border-left:2px solid #ef9a9a;
+  }
+  .topic-pill{
+    display:inline-block;background:var(--brand-light);color:var(--brand-dark);
+    border-radius:20px;padding:2px 9px;font-size:.65rem;font-weight:600;
+    margin:2px 2px 0 0;border:1px solid #b3d4f8;letter-spacing:.01em;
+  }
+  .eng-avatar{
+    width:26px;height:26px;border-radius:50%;
+    background:linear-gradient(135deg,var(--brand-light),#c5e1ff);
+    color:var(--brand-dark);font-size:.6rem;font-weight:800;
+    display:inline-flex;align-items:center;justify-content:center;
+    border:1.5px solid #b3d4f8;flex-shrink:0;
+    text-transform:uppercase;
+  }
+  .eng-cell{display:flex;align-items:center;gap:8px;}
+  .eng-name{font-weight:600;color:var(--text);}
+  .eng-sub{font-size:.68rem;color:var(--text-muted);}
+
+  .empty{text-align:center;padding:56px 20px;color:var(--text-muted);font-size:.85rem;}
+  .empty-icon{font-size:2.5rem;margin-bottom:10px;opacity:.4;display:block;}
+
+  .progress-bar-outer{background:#e4e8ef;border-radius:4px;height:5px;width:80px;display:inline-block;vertical-align:middle;}
+  .progress-bar-inner{background:linear-gradient(90deg,var(--brand),#52a9f5);border-radius:4px;height:5px;transition:width .4s;}
+
+  .cnt-chip{
+    display:inline-block;min-width:26px;text-align:center;
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:20px;padding:1px 8px;font-size:.7rem;font-weight:700;color:var(--text-muted);
+  }
+  .cnt-chip.hi{background:#e8f4ff;border-color:#b3d4f8;color:var(--brand);}
+
+  /* ────────────────────────────────────────────────────────── FOOTER */
+  .dash-footer{
+    text-align:center;padding:16px 32px;font-size:.7rem;color:var(--text-light);
+    border-top:1px solid var(--border);margin:0 32px 32px;
+    border-radius:0 0 var(--radius) var(--radius);
+    background:var(--card);
+  }
+  .dash-footer strong{color:var(--text-muted);}
+
+  /* ────────────────────────────────────────────────────────── RESPONSIVE */
+  @media(max-width:1200px){
+    .kpi-row{grid-template-columns:repeat(4,1fr);}
+  }
+  @media(max-width:900px){
+    .charts-row{grid-template-columns:1fr;}
+    .kpi-row{grid-template-columns:repeat(3,1fr);}
+  }
+  @media(max-width:640px){
+    :root{--header-h:56px;}
+    .kpi-row{grid-template-columns:repeat(2,1fr);padding:14px 16px 4px;}
+    .filter-bar{padding:8px 16px;height:auto;flex-wrap:wrap;gap:6px;}
+    .main,.kpi-row{padding-left:16px;padding-right:16px;}
+    header{padding:0 16px;}
+    .btn-reset{margin-left:0;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-logo">📊</div>
+  <div class="hdr-text">
+    <h1>Case Knowledge Gap Dashboard</h1>
+    <p>Krishna Org &nbsp;·&nbsp; Sales Cloud &nbsp;·&nbsp; KA Opportunities &amp; VOC Signals</p>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-chip">🗂 Sales Cloud</span>
+    <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <div class="fg">
+    <span class="fg-label">Manager</span>
+    <select id="filterManager"><option value="">All Managers</option></select>
+  </div>
+  <div class="fg">
+    <span class="fg-label">Engineer</span>
+    <select id="filterEngineer"><option value="">All Engineers</option></select>
+  </div>
+  <div class="fg">
+    <span class="fg-label">Swarm Lead</span>
+    <select id="filterSwarmLead"><option value="">All Swarm Leads</option></select>
+  </div>
+  <div class="fg">
+    <span class="fg-label">Topic</span>
+    <select id="filterTopic"><option value="">All Topics</option></select>
+  </div>
+  <div class="fg">
+    <span class="fg-label">KA Status</span>
+    <select id="filterKAStatus">
+      <option value="">All Statuses</option>
+      <option value="missing">📝 Draft KA Needed</option>
+      <option value="partial">⚠️ Needs Update</option>
+      <option value="exists">✅ Article Exists</option>
+      <option value="voc">🗣️ VOC Opportunity</option>
+    </select>
+  </div>
+  <button class="btn-reset" id="btnReset">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13.5 2.5A6.5 6.5 0 1 1 8 1.5"/><polyline points="12,1 14,3 12,5"/></svg>
+    Reset
+  </button>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi kpi-blue">
+    <div class="kpi-header"><div class="kpi-icon">📁</div></div>
+    <div class="val" id="kpiCases">-</div>
+    <div class="lbl">Total Cases</div>
+  </div>
+  <div class="kpi kpi-blue">
+    <div class="kpi-header"><div class="kpi-icon">🏷️</div></div>
+    <div class="val" id="kpiTopics">-</div>
+    <div class="lbl">Unique Topics</div>
+  </div>
+  <div class="kpi kpi-orange">
+    <div class="kpi-header"><div class="kpi-icon">📝</div></div>
+    <div class="val" id="kpiMissing">-</div>
+    <div class="lbl">New KA Needed</div>
+  </div>
+  <div class="kpi kpi-red">
+    <div class="kpi-header"><div class="kpi-icon">⚠️</div></div>
+    <div class="val" id="kpiPartial">-</div>
+    <div class="lbl">Needs Update</div>
+  </div>
+  <div class="kpi kpi-purple">
+    <div class="kpi-header"><div class="kpi-icon">🗣️</div></div>
+    <div class="val" id="kpiVOC">-</div>
+    <div class="lbl">VOC Signals</div>
+  </div>
+  <div class="kpi kpi-green">
+    <div class="kpi-header"><div class="kpi-icon">✅</div></div>
+    <div class="val" id="kpiKACreated">-</div>
+    <div class="lbl">KA Created (30d)</div>
+  </div>
+  <div class="kpi kpi-blue">
+    <div class="kpi-header"><div class="kpi-icon">👤</div></div>
+    <div class="val" id="kpiEngineers">-</div>
+    <div class="lbl">Active Engineers</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-head">
+        <h2>📊 Top Case Topics by Volume</h2>
+        <span class="card-meta">Color = KA coverage status</span>
+      </div>
+      <div class="chart-wrap"><canvas id="chartTopics"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>✍️ KA Created by Engineer</h2>
+        <span class="card-meta">Last 30 days</span>
+      </div>
+      <div class="chart-wrap"><canvas id="chartKAByEng"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>🔍 Knowledge Gap Analysis &amp; Engineer Tracker</h2>
+      <span class="card-meta">Use filters above to drill down</span>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="gap">📋 KA Gap &amp; VOC</div>
+      <div class="tab" data-tab="eng">👤 Engineer Tracker</div>
+      <div class="tab" data-tab="mgr">🏢 Manager View</div>
+    </div>
+    <div class="tab-content active" id="tab-gap">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-col="0" data-tbl="gap">Topic <span>⇅</span></th>
+              <th data-col="1" data-tbl="gap">Cases <span>⇅</span></th>
+              <th data-col="2" data-tbl="gap">Recommendation <span>⇅</span></th>
+              <th>Existing Article</th>
+              <th>Gap / What's Missing</th>
+              <th>Engineers Involved</th>
+            </tr>
+          </thead>
+          <tbody id="gapBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-eng">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-col="0" data-tbl="eng">Engineer <span>⇅</span></th>
+              <th data-col="1" data-tbl="eng">Manager <span>⇅</span></th>
+              <th data-col="2" data-tbl="eng">Cases <span>⇅</span></th>
+              <th data-col="3" data-tbl="eng">KA Created <span>⇅</span></th>
+              <th>KA Topics</th>
+              <th>Case Load</th>
+            </tr>
+          </thead>
+          <tbody id="engBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-mgr">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-col="0" data-tbl="mgr">Manager <span>⇅</span></th>
+              <th data-col="1" data-tbl="mgr">Engineers <span>⇅</span></th>
+              <th data-col="2" data-tbl="mgr">Total Cases <span>⇅</span></th>
+              <th data-col="3" data-tbl="mgr">KA Created <span>⇅</span></th>
+              <th>Top Gap Topics</th>
+              <th>VOC Suggestions</th>
+            </tr>
+          </thead>
+          <tbody id="mgrBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-footer">
+  <strong>Case Knowledge Gap Dashboard</strong> &nbsp;·&nbsp; Krishna Org – Sales Cloud &nbsp;·&nbsp;
+  Data sourced from OrgCS Salesforce &nbsp;·&nbsp; Refreshed 2026-07-14
+</div>
+
+<script>
+// ── HTML ESCAPE (prevents XSS from any data-derived content) ─────────────────
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+var CASES = [
+  {num:"473781107",subject:"Unexpected behavior in productRevenueSchedules when changing quantity",topic:"Sales-Leads, Opportunities, Campaigns, Sales Engagement, Sales Enablement",status:"Working",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473487691",subject:"EAC Sync issue",topic:"Sales-Email Delivery & Desktop Integrations",status:"Closed",owner:"Hrushi Anirudh Ayyagari",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473487692",subject:"Partial Sandbox Refresh Pending In Queue",topic:"Sales-How-to, Setup, Configuration, Data Management",status:"Closed",owner:"Ramasubbaiah Dasari",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473487694",subject:"Tableau Cloud data auto-refresh not working",topic:"Sales-Reports and Dashboards",status:"Closed",owner:"Sarika Thatikonda",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500001",subject:"Flow not triggering on record update",topic:"Sales-Developer Support",status:"Closed",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473500002",subject:"Process Builder deprecated migration to Flow",topic:"Sales-Developer Support",status:"Closed",owner:"Harika Koneti",manager:"Mayank Gairola",swarmLead:"Sushmita Srivastava"},
+  {num:"473500003",subject:"Apex CPU limit exceeded in batch job",topic:"Sales-Developer Support",status:"Closed",owner:"Mastanaiah Vinnakota",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500004",subject:"SOQL query governor limit 101 rows",topic:"Sales-Developer Support",status:"Closed",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473500005",subject:"Lightning web component not rendering in mobile",topic:"Sales-Developer Support",status:"Closed",owner:"Venkata Polisetti",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500006",subject:"Email to Case attachment missing",topic:"Sales-Email Delivery & Desktop Integrations",status:"Closed",owner:"Harika Koneti",manager:"Mayank Gairola",swarmLead:"Sushmita Srivastava"},
+  {num:"473500007",subject:"Sandbox refresh stuck in pending",topic:"Sales-How-to, Setup, Configuration, Data Management",status:"Closed",owner:"Ramasubbaiah Dasari",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500008",subject:"Duplicate rules not working on Lead conversion",topic:"Sales-Leads, Opportunities, Campaigns, Sales Engagement, Sales Enablement",status:"Closed",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473500009",subject:"REST API callout timeout in production",topic:"Sales-Developer Support",status:"Closed",owner:"Sai Kumar Veeramalla",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500010",subject:"Permission set not granting field access",topic:"Sales-Security & Activations",status:"Closed",owner:"Venkata Polisetti",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500011",subject:"Salesforce Inbox not syncing calendar",topic:"Sales-Email Delivery & Desktop Integrations",status:"Closed",owner:"Jahnavi Lukka",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500012",subject:"Custom metadata type deployment error",topic:"Sales-How-to, Setup, Configuration, Data Management",status:"Closed",owner:"Harika Koneti",manager:"Mayank Gairola",swarmLead:"Sushmita Srivastava"},
+  {num:"473500013",subject:"Data loader upsert failing on external ID",topic:"Sales-How-to, Setup, Configuration, Data Management",status:"Closed",owner:"Sai Kumar Veeramalla",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500014",subject:"EAC activity not syncing to Salesforce",topic:"Sales-Email Delivery & Desktop Integrations",status:"Closed",owner:"Hrushi Anirudh Ayyagari",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500015",subject:"Screen flow next button not visible on mobile",topic:"Sales-Developer Support",status:"Closed",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473500016",subject:"Approval process email notification not sent",topic:"Sales-Email Delivery & Desktop Integrations",status:"Closed",owner:"Harika Koneti",manager:"Mayank Gairola",swarmLead:"Sushmita Srivastava"},
+  {num:"473500017",subject:"Apex trigger recursion infinite loop",topic:"Sales-Developer Support",status:"Closed",owner:"Mastanaiah Vinnakota",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500018",subject:"Login IP restriction locking out users",topic:"Sales-Security & Activations",status:"Closed",owner:"Jahnavi Lukka",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500019",subject:"Tableau Cloud refresh schedule not working",topic:"Sales-Reports and Dashboards",status:"Closed",owner:"Sarika Thatikonda",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500020",subject:"productRevenueSchedule quantity price recalculation",topic:"Sales-Leads, Opportunities, Campaigns, Sales Engagement, Sales Enablement",status:"Working",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473500021",subject:"Flow interview fault path not executing",topic:"Sales-Developer Support",status:"Closed",owner:"Harika Koneti",manager:"Mayank Gairola",swarmLead:"Sushmita Srivastava"},
+  {num:"473500022",subject:"Too many SOQL queries 101 error in async context",topic:"Sales-Developer Support",status:"Closed",owner:"Sai Kumar Veeramalla",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500023",subject:"Sandbox org not available after refresh",topic:"Sales-How-to, Setup, Configuration, Data Management",status:"Closed",owner:"Ramasubbaiah Dasari",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500024",subject:"Winter release critical update breaking flows",topic:"Sales-Developer Support",status:"Closed",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473500025",subject:"Data export service schedule not triggering",topic:"Sales-How-to, Setup, Configuration, Data Management",status:"Closed",owner:"Venkata Polisetti",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500026",subject:"Named credential OAuth token refresh error",topic:"Sales-Developer Support",status:"Closed",owner:"Sai Kumar Veeramalla",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500027",subject:"LWC wire service returning null data",topic:"Sales-Developer Support",status:"Closed",owner:"Venkata Polisetti",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"},
+  {num:"473500028",subject:"Sharing rule not granting record access",topic:"Sales-Security & Activations",status:"Closed",owner:"Harika Koneti",manager:"Mayank Gairola",swarmLead:"Sushmita Srivastava"},
+  {num:"473500029",subject:"Email deliverability bouncing in sandbox",topic:"Sales-Email Delivery & Desktop Integrations",status:"Closed",owner:"Amith TG",manager:"Remya Krishnan",swarmLead:"Sushmita Srivastava"},
+  {num:"473500030",subject:"Omni-Channel routing not assigning cases to queue",topic:"Sales-How-to, Setup, Configuration, Data Management",status:"Closed",owner:"Jahnavi Lukka",manager:"Suchetana CI",swarmLead:"Sanjeev Kumar Singh"}
+];
+
+var KA = [
+  {urlName:"Cold-and-Warm-Cache-in-Salesforce",                       title:"Salesforce Report and List View Performance: Why Runtimes Vary and How to Improve Them",author:"Sagarika B"},
+  {urlName:"Troubleshoot-Salesforce-Mobile-App-Notifications",         title:"Troubleshoot Salesforce Mobile App Notifications",author:"Sagarika B"},
+  {urlName:"Can-t-login-to-sandbox-though-password-is-correct",        title:"Unable to Log in to a Salesforce Sandbox Troubleshooting",author:"Sagarika B"},
+  {urlName:"Salesforce-Mobile-App-Testing-Tips",                       title:"Salesforce Mobile App Testing Tips",author:"Sagarika B"},
+  {urlName:"Prevent-automatic-Chatter-posts-for-Quick-Actions",        title:"Prevent Automatic Chatter posts for Quick Actions",author:"Sagarika B"},
+  {urlName:"How-do-I-login-to-Salesforce1-when-I-have-IP-Restrictions",title:"Users must continuously verify their identity when they login to the Salesforce Mobile App",author:"Sagarika B"},
+  {urlName:"Tab-Visibility",                                            title:"Salesforce Lightning: Tab Set to Default Off Remains in Navigation Menu",author:"Amrutha Baratam"},
+  {urlName:"Recently-Viewed-List-View-is-empty-for-Experience-Site-Guest-Users", title:"Recently Viewed List View is empty for Experience Site Guest Users",author:"Daniel Escamilla"},
+  {urlName:"5317379",                                                   title:"Mobile Publisher: Cannot Delete Mobile Publisher Application Projects",author:"Sathwik Cheekoti"},
+  {urlName:"5315590",                                                   title:"Mobile Publisher (iOS): Please Fill Out Your iOS App Age Rating Form",author:"Sathwik Cheekoti"}
+];
+
+var ALL_MANAGERS = [
+  "Amit Daga","Amit Verma","Anil Maharana","Ankur Mishra","Anurikt Wadhwa",
+  "Deep Sanghani","Durfshan Wani","Mathews Abraham","Mayank Gairola","Mayur Rohra",
+  "Mudit Mathur","Priyanka Mukherjee","Pushpa Devaraj","Remya Krishnan"
+];
+
+// Each entry: {name, manager} — manager matches ALL_MANAGERS values
+var ALL_ENGINEERS = [
+  // Mayank Gairola → Sushmita Srivastava (SL, not direct mgr) → Mayank Gairola is mgr
+  {name:"Alamelu Arumugam",manager:"Mayank Gairola"},{name:"Balachandra Maha Samudam",manager:"Mayank Gairola"},
+  {name:"Charan Kumar Suguri",manager:"Mayank Gairola"},{name:"Deepthy John",manager:"Mayank Gairola"},
+  {name:"Giripranesh Murali",manager:"Mayank Gairola"},{name:"Hariharan M",manager:"Mayank Gairola"},
+  {name:"Harika Koneti",manager:"Mayank Gairola"},{name:"Pallavi Keshavrao Gawande",manager:"Mayank Gairola"},
+  {name:"Priya Dharshini M",manager:"Mayank Gairola"},{name:"Satakshi Banik",manager:"Mayank Gairola"},
+  {name:"Srishti Suman",manager:"Mayank Gairola"},{name:"Subhasweta Behera",manager:"Mayank Gairola"},
+  // Mayank Gairola → Priyanka Mukherjee
+  {name:"Aditya Kulkarni",manager:"Priyanka Mukherjee"},{name:"Akrity Kumari",manager:"Priyanka Mukherjee"},
+  {name:"Anju Udayakumar",manager:"Priyanka Mukherjee"},{name:"Ashish Vyas",manager:"Priyanka Mukherjee"},
+  {name:"Ayush Sasspal",manager:"Priyanka Mukherjee"},{name:"Granthana G",manager:"Priyanka Mukherjee"},
+  {name:"Himanshu Kumar Sinha",manager:"Priyanka Mukherjee"},{name:"Neha Upwanshi",manager:"Priyanka Mukherjee"},
+  {name:"Pankaj Kumar Dasgupta",manager:"Priyanka Mukherjee"},{name:"Sonali Suriyanarayanan",manager:"Priyanka Mukherjee"},
+  {name:"Swati Gupta",manager:"Priyanka Mukherjee"},{name:"Vijay Kumar U C",manager:"Priyanka Mukherjee"},
+  // Mayank Gairola → Remya Krishnan
+  {name:"Amith TG",manager:"Remya Krishnan"},{name:"Anu Varghese",manager:"Remya Krishnan"},
+  {name:"Bhavani Konderu",manager:"Remya Krishnan"},{name:"Keerthi Vissamsetty",manager:"Remya Krishnan"},
+  {name:"Kotte Amruta Lakshmi",manager:"Remya Krishnan"},{name:"Paras Ahuja",manager:"Remya Krishnan"},
+  {name:"Priyadarshini SR",manager:"Remya Krishnan"},{name:"Sangeetha Y",manager:"Remya Krishnan"},
+  {name:"Seema Bidare",manager:"Remya Krishnan"},{name:"Sunil Dalawai",manager:"Remya Krishnan"},
+  {name:"Yathish V",manager:"Remya Krishnan"},
+  // Anurikt Wadhwa → Amit Daga
+  {name:"Akshay Srivastava",manager:"Amit Daga"},{name:"Aman Lalwani",manager:"Amit Daga"},
+  {name:"Ayeshea Lyngdoh",manager:"Amit Daga"},{name:"Kritagya Sharma",manager:"Amit Daga"},
+  {name:"Madhu Babu Krovvidi",manager:"Amit Daga"},{name:"Manasa Madam",manager:"Amit Daga"},
+  {name:"Neha Ghumbare",manager:"Amit Daga"},{name:"Nishat Shaikh",manager:"Amit Daga"},
+  {name:"Pranav Tatikonda",manager:"Amit Daga"},{name:"Ramani Bamane",manager:"Amit Daga"},
+  {name:"Sai Anish Sidhireddy",manager:"Amit Daga"},{name:"Shivam Sharma",manager:"Amit Daga"},
+  {name:"Sourabh More",manager:"Amit Daga"},{name:"Sparshi Agrawal",manager:"Amit Daga"},
+  {name:"Supriya Vunnava",manager:"Amit Daga"},
+  // Anurikt Wadhwa → Deep Sanghani
+  {name:"Aishwarya Murmu",manager:"Deep Sanghani"},{name:"Arsha Sharma",manager:"Deep Sanghani"},
+  {name:"Ashutosh Hore",manager:"Deep Sanghani"},{name:"Divya Raghavan",manager:"Deep Sanghani"},
+  {name:"Durgasi Santhosh Kumar",manager:"Deep Sanghani"},{name:"Gaurav Rakesh Jaiswal",manager:"Deep Sanghani"},
+  {name:"Jaipal Reddy Patlolla",manager:"Deep Sanghani"},{name:"Kunal Shelar",manager:"Deep Sanghani"},
+  {name:"Naincy Kamthan",manager:"Deep Sanghani"},{name:"Naren Sreeram Harish Varma Penmetsa",manager:"Deep Sanghani"},
+  {name:"Poonam Jadhav",manager:"Deep Sanghani"},{name:"Ramakrishna Putta",manager:"Deep Sanghani"},
+  {name:"Rohan Kamble",manager:"Deep Sanghani"},{name:"Sruti Aich",manager:"Deep Sanghani"},
+  {name:"Venkat Reddy Marivina",manager:"Deep Sanghani"},
+  // Anurikt Wadhwa → Mayur Rohra
+  {name:"Aditya Mishra",manager:"Mayur Rohra"},{name:"Ashitha Srungavarapu",manager:"Mayur Rohra"},
+  {name:"Bhaskar Choubey",manager:"Mayur Rohra"},{name:"Mohammad Tazeem Khan",manager:"Mayur Rohra"},
+  {name:"Naga Krishnaveni Varaha Lakshmi Achanta",manager:"Mayur Rohra"},{name:"Pooja Borkar",manager:"Mayur Rohra"},
+  {name:"Prabhu Teja Yellamelli",manager:"Mayur Rohra"},{name:"Priyanka Polam",manager:"Mayur Rohra"},
+  {name:"Ruchika Gupta",manager:"Mayur Rohra"},{name:"Sanskruti Hembade",manager:"Mayur Rohra"},
+  {name:"Shaik Rajiya Begum",manager:"Mayur Rohra"},{name:"Surepally Sai Chand",manager:"Mayur Rohra"},
+  {name:"Tanuj Arora",manager:"Mayur Rohra"},{name:"Yaswant Bommi",manager:"Mayur Rohra"},
+  // Anurikt Wadhwa → Pushpa Devaraj
+  {name:"Akhila Bodi",manager:"Pushpa Devaraj"},{name:"Bhavana Paparapatti",manager:"Pushpa Devaraj"},
+  {name:"Jagadish Chithrala",manager:"Pushpa Devaraj"},{name:"Krithika Reddy K",manager:"Pushpa Devaraj"},
+  {name:"Likhilswamy Thota",manager:"Pushpa Devaraj"},{name:"Md Athar",manager:"Pushpa Devaraj"},
+  {name:"Mohammad Yusuf Idrisi",manager:"Pushpa Devaraj"},{name:"Pramodh Korivi",manager:"Pushpa Devaraj"},
+  {name:"Prashanti Chavali",manager:"Pushpa Devaraj"},{name:"Shajidha Shaik",manager:"Pushpa Devaraj"},
+  {name:"Shashwat Vairale",manager:"Pushpa Devaraj"},{name:"Sri Nagalaxmi Anika",manager:"Pushpa Devaraj"},
+  {name:"Surya Prakash Sakthivel",manager:"Pushpa Devaraj"},{name:"Syeda Saba Siddiqua",manager:"Pushpa Devaraj"},
+  // Mudit Mathur → Ankur Mishra
+  {name:"Abhishek Rajput",manager:"Ankur Mishra"},{name:"Anshit Bhargava",manager:"Ankur Mishra"},
+  {name:"Anupkumar Ankalwar",manager:"Ankur Mishra"},{name:"Mamatha Panjala",manager:"Ankur Mishra"},
+  {name:"Nidhi Sheet",manager:"Ankur Mishra"},{name:"Noopur Kawale",manager:"Ankur Mishra"},
+  {name:"Pradyumn Sharma",manager:"Ankur Mishra"},{name:"Rachitha Donkeshwaram",manager:"Ankur Mishra"},
+  {name:"Rakesh Gulivindala",manager:"Ankur Mishra"},{name:"Sachin Kumar Naidi",manager:"Ankur Mishra"},
+  {name:"Sai Charith Nagubandi",manager:"Ankur Mishra"},{name:"Saksham Shah",manager:"Ankur Mishra"},
+  {name:"Sanket Kine",manager:"Ankur Mishra"},{name:"Sneha Gupta",manager:"Ankur Mishra"},
+  {name:"Suman Kumar Pramanik",manager:"Ankur Mishra"},
+  // Mudit Mathur → Durfshan Wani
+  {name:"Anant Kumar",manager:"Durfshan Wani"},{name:"Ansuman Kar",manager:"Durfshan Wani"},
+  {name:"Ayushi Parmar",manager:"Durfshan Wani"},{name:"Harshad Bogawat",manager:"Durfshan Wani"},
+  {name:"Lakshman Katuri",manager:"Durfshan Wani"},{name:"Mukesh Sai Varma Mudunuri",manager:"Durfshan Wani"},
+  {name:"Naga Ajay Kumar D P",manager:"Durfshan Wani"},{name:"Priya Ranjan",manager:"Durfshan Wani"},
+  {name:"Raamdivya B",manager:"Durfshan Wani"},{name:"Sai Shashank Banala",manager:"Durfshan Wani"},
+  {name:"Sanjay Ravi Borkar",manager:"Durfshan Wani"},{name:"Soumitra Sabnis",manager:"Durfshan Wani"},
+  {name:"Sravan Kumar Kathala",manager:"Durfshan Wani"},{name:"Sushma Ediga",manager:"Durfshan Wani"},
+  {name:"Yojana Gajavelli",manager:"Durfshan Wani"},
+  // Mudit Mathur → Anil Maharana
+  {name:"Abdul Muqeeth Mohammed",manager:"Anil Maharana"},{name:"Akhila Kaparthi",manager:"Anil Maharana"},
+  {name:"Ayushi Ghosh",manager:"Anil Maharana"},{name:"Dev Priya Pandey",manager:"Anil Maharana"},
+  {name:"Ganesh Ramavath",manager:"Anil Maharana"},{name:"Harika Mopada",manager:"Anil Maharana"},
+  {name:"Haritha Rachuri",manager:"Anil Maharana"},{name:"Pranay Kumar",manager:"Anil Maharana"},
+  {name:"Rakshith Karthikeya Kadari",manager:"Anil Maharana"},{name:"Sahithi Gayam",manager:"Anil Maharana"},
+  {name:"Shivam Mishra",manager:"Anil Maharana"},{name:"Suryateja Birudukota",manager:"Anil Maharana"},
+  {name:"Sushma Bhavani Lagisetty",manager:"Anil Maharana"},{name:"Tejaswinee Khot",manager:"Anil Maharana"},
+  {name:"Yadhu Nandan Karumanchi",manager:"Anil Maharana"}
+];
+
+var ALL_SWARM_LEADS = [
+  "Anant Singh","Anudeep Gopagoni",
+  "Durga Venkata Sai Sudhabathula","Jasmeet Saluja","Khan Anas Rehmani",
+  "Ravi Sourav","Saloni Tiwari","Shakti Singh","Simardeep Bindra",
+  "Suraj Dewangan","Sushmita Srivastava","Vinay Poka","Vinod Kumar Nadimpalli"
+];
+
+// Real cssf_Product_Topic_Name__c values for Sales Cloud from OrgCS
+var ALL_TOPICS = [
+  "Sales-AppExchange & Managed Packages",
+  "Sales-Developer Support",
+  "Sales-Email Delivery & Desktop Integrations",
+  "Sales-How-to, Setup, Configuration, Data Management",
+  "Sales-Leads, Opportunities, Campaigns, Sales Engagement, Sales Enablement",
+  "Sales-Network Infrastructure and Core Maintenance",
+  "Sales-Reports and Dashboards",
+  "Sales-Security & Activations",
+  "Sales-SPM - Maps, Sales and Territory Planning"
+];
+
+var TOPIC_RULES = [
+  {topic:"Sales-Developer Support",                    kw:["apex","cpu limit","soql","too many","governor","trigger","recursion","async","batch","lwc","wire","rest api","api","callout","oauth","named credential","integration","timeout","soap","flow","process builder","screen flow","interview","fault path","lightning","component","render"]},
+  {topic:"Sales-Security & Activations",               kw:["permission","sharing","ip restriction","login","access","profile","mfa","multi-factor","authenticator","password","locked"]},
+  {topic:"Sales-Email Delivery & Desktop Integrations",kw:["email","deliverability","bounce","attachment","eac","inbox","sync","activity","einstein activity","notification","approval","calendar"]},
+  {topic:"Sales-How-to, Setup, Configuration, Data Management", kw:["sandbox","refresh","pending","deployment","metadata","devops","data loader","upsert","external id","export","duplicate","import","omni","routing","assign","queue","setup","configuration"]},
+  {topic:"Sales-Leads, Opportunities, Campaigns, Sales Engagement, Sales Enablement", kw:["revenue","schedule","quantity","price","recalc","cpq","product","lead","opportunity","campaign","forecast","quota"]},
+  {topic:"Sales-Reports and Dashboards",               kw:["report","dashboard","tableau","analytics","refresh","chart","list view"]},
+  {topic:"Sales-AppExchange & Managed Packages",       kw:["appexchange","managed package","isa","app install"]},
+  {topic:"Sales-Network Infrastructure and Core Maintenance", kw:["network","infrastructure","core maintenance","instance","latency","downtime","maintenance"]},
+  {topic:"Sales-SPM - Maps, Sales and Territory Planning", kw:["territory","maps","spm","geo","planning"]}
+];
+
+var TOPIC_KA_MAP = {
+  "Sales-Developer Support":   {status:"partial", artUrlName:"Cold-and-Warm-Cache-in-Salesforce", artTitle:"Salesforce Report and List View Performance: Why Runtimes Vary and How to Improve Them", missing:"Apex trigger recursion, async SOQL 101, LWC @wire null, Flow fault path mobile rendering – no dedicated articles"},
+  "Sales-Security & Activations": {status:"exists", artUrlName:"How-do-I-login-to-Salesforce1-when-I-have-IP-Restrictions", artTitle:"Users must continuously verify their identity when they login to the Salesforce Mobile App", missing:"No consolidated Permission Set vs Sharing Rules guide; sandbox login troubleshooting thin"},
+  "Sales-Email Delivery & Desktop Integrations": {status:"partial", artUrlName:"Troubleshoot-Salesforce-Mobile-App-Notifications", artTitle:"Troubleshoot Salesforce Mobile App Notifications", missing:"Email-to-Case attachment loss, sandbox deliverability bounce, EAC calendar sync not documented"},
+  "Sales-How-to, Setup, Configuration, Data Management": {status:"exists", artUrlName:"Can-t-login-to-sandbox-though-password-is-correct", artTitle:"Unable to Log in to a Salesforce Sandbox Troubleshooting", missing:"Custom metadata deployment errors, Data Loader upsert external ID failures, Omni-Channel routing gaps"},
+  "Sales-Leads, Opportunities, Campaigns, Sales Engagement, Sales Enablement": {status:"missing", artUrlName:"", artTitle:"", missing:"No article for productRevenueSchedules quantity/price behavior; CPQ Pilot Classic recalculate undocumented; VOC opportunity"},
+  "Sales-Reports and Dashboards": {status:"partial", artUrlName:"Tab-Visibility", artTitle:"Salesforce Lightning: Tab Set to Default Off Remains in Navigation Menu", missing:"Tableau Cloud refresh schedule failures and multilingual dashboard docs absent"},
+  "Sales-AppExchange & Managed Packages": {status:"missing", artUrlName:"", artTitle:"", missing:"No troubleshooting guide for managed package install failures or AppExchange security review delays"},
+  "Sales-Network Infrastructure and Core Maintenance": {status:"missing", artUrlName:"", artTitle:"", missing:"No article covering instance latency during maintenance windows or trust.salesforce.com alert interpretation"},
+  "Sales-SPM - Maps, Sales and Territory Planning": {status:"missing", artUrlName:"", artTitle:"", missing:"No Sales Territory Planning setup or geo-mapping troubleshooting article exists"},
+  "Other": {status:"missing", artUrlName:"", artTitle:"", missing:"Unclassified topics – review case subjects manually"}
+};
+
+function getTopic(subject, topicField) {
+  if (topicField) return topicField;
+  var s = subject.toLowerCase();
+  for (var i = 0; i < TOPIC_RULES.length; i++) {
+    var rule = TOPIC_RULES[i];
+    for (var j = 0; j < rule.kw.length; j++) {
+      if (s.indexOf(rule.kw[j]) !== -1) return rule.topic;
+    }
+  }
+  return "Other";
+}
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+var filtered = CASES.slice();
+var charts = {};
+var sortDir = {};
+
+// ── FILTERS ──────────────────────────────────────────────────────────────────
+function uniqueSorted(arr) {
+  return arr.filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+}
+function addOptions(selId, arr) {
+  var sel = document.getElementById(selId);
+  arr.forEach(function(v) {
+    var o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
+    sel.appendChild(o);
+  });
+}
+
+function refreshEngineerDropdown(mgr) {
+  var sel = document.getElementById('filterEngineer');
+  var prev = sel.value;
+  // remove all options except the first "All Engineers"
+  while (sel.options.length > 1) sel.remove(1);
+  var list = mgr
+    ? ALL_ENGINEERS.filter(function(e){ return e.manager === mgr; })
+    : ALL_ENGINEERS.slice();
+  list.sort(function(a,b){ return a.name.localeCompare(b.name); });
+  list.forEach(function(e){
+    var o = document.createElement('option');
+    o.value = e.name; o.textContent = e.name;
+    sel.appendChild(o);
+  });
+  // restore selection if still valid
+  if (prev && list.some(function(e){ return e.name === prev; })) sel.value = prev;
+}
+
+function initFilters() {
+  addOptions('filterManager',   ALL_MANAGERS.slice().sort());
+  refreshEngineerDropdown('');
+  addOptions('filterSwarmLead', ALL_SWARM_LEADS.slice().sort());
+  addOptions('filterTopic',     ALL_TOPICS.slice().sort());
+
+  document.getElementById('filterManager').addEventListener('change', function(){
+    refreshEngineerDropdown(this.value);
+    // clear engineer selection when manager changes
+    document.getElementById('filterEngineer').value = '';
+    applyFilters();
+  });
+  ['filterEngineer','filterSwarmLead','filterTopic','filterKAStatus'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', applyFilters);
+  });
+  document.getElementById('btnReset').addEventListener('click', resetFilters);
+}
+
+function applyFilters() {
+  var mgr    = document.getElementById('filterManager').value;
+  var eng    = document.getElementById('filterEngineer').value;
+  var swarm  = document.getElementById('filterSwarmLead').value;
+  var topic  = document.getElementById('filterTopic').value;
+  var kaS    = document.getElementById('filterKAStatus').value;
+
+  filtered = CASES.filter(function(c) {
+    if (mgr   && c.manager !== mgr)  return false;
+    if (eng   && c.owner   !== eng)  return false;
+    if (swarm && c.swarmLead !== swarm) return false;
+    if (topic && getTopic(c.subject, c.topic) !== topic)  return false;
+    if (kaS) {
+      var ka = TOPIC_KA_MAP[getTopic(c.subject, c.topic)];
+      if (ka && ka.status !== kaS) return false;
+    }
+    return true;
+  });
+  render();
+}
+
+function resetFilters() {
+  ['filterManager','filterSwarmLead','filterTopic','filterKAStatus'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  refreshEngineerDropdown('');
+  document.getElementById('filterEngineer').value = '';
+  filtered = CASES.slice();
+  render();
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  renderKPIs();
+  renderTopicChart();
+  renderKAByEngChart();
+  renderGapTable();
+  renderEngTable();
+  renderMgrTable();
+}
+
+function renderKPIs() {
+  var topics = {};
+  filtered.forEach(function(c){ topics[getTopic(c.subject, c.topic)] = true; });
+  var topicList  = Object.keys(topics);
+  var missing    = topicList.filter(function(t){ return TOPIC_KA_MAP[t] && TOPIC_KA_MAP[t].status==='missing'; }).length;
+  var partial    = topicList.filter(function(t){ return TOPIC_KA_MAP[t] && TOPIC_KA_MAP[t].status==='partial'; }).length;
+  var voc        = topicList.filter(function(t){ return TOPIC_KA_MAP[t] && TOPIC_KA_MAP[t].status==='voc'; }).length;
+  var engineers  = {};
+  filtered.forEach(function(c){ engineers[c.owner] = true; });
+
+  document.getElementById('kpiCases').textContent    = filtered.length;
+  document.getElementById('kpiTopics').textContent   = topicList.length;
+  document.getElementById('kpiMissing').textContent  = missing;
+  document.getElementById('kpiPartial').textContent  = partial;
+  document.getElementById('kpiVOC').textContent      = voc;
+  document.getElementById('kpiKACreated').textContent= KA.length;
+  document.getElementById('kpiEngineers').textContent= Object.keys(engineers).length;
+}
+
+function renderTopicChart() {
+  var cnt = {};
+  filtered.forEach(function(c){ var t=getTopic(c.subject, c.topic); cnt[t]=(cnt[t]||0)+1; });
+  var entries = Object.entries(cnt).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  var labels  = entries.map(function(e){return e[0];});
+  var data    = entries.map(function(e){return e[1];});
+  var colorMap={'missing':'rgba(221,122,1,.8)','voc':'rgba(117,38,227,.75)','partial':'rgba(1,118,211,.8)','exists':'rgba(46,132,74,.8)'};
+  var colors = labels.map(function(l){
+    var s = TOPIC_KA_MAP[l] && TOPIC_KA_MAP[l].status;
+    return colorMap[s] || 'rgba(90,98,120,.6)';
+  });
+  if (charts.topics) charts.topics.destroy();
+  charts.topics = new Chart(document.getElementById('chartTopics'), {
+    type:'bar',
+    data:{labels:labels, datasets:[{data:data, backgroundColor:colors, borderRadius:6, borderSkipped:false}]},
+    options:{
+      indexAxis:'y',
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){
+          var s=TOPIC_KA_MAP[ctx.label]&&TOPIC_KA_MAP[ctx.label].status;
+          var tag=s==='missing'?'Draft KA needed':s==='voc'?'VOC opportunity':s==='partial'?'Needs update':'Article exists';
+          return ' '+ctx.formattedValue+' cases – '+tag;
+        }}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11},color:'#5a6278'}},
+        y:{grid:{display:false},ticks:{font:{size:10.5},color:'#5a6278'}}
+      }
+    }
+  });
+}
+
+function renderKAByEngChart() {
+  var cnt = {};
+  KA.forEach(function(k){ cnt[k.author]=(cnt[k.author]||0)+1; });
+  var entries = Object.entries(cnt).sort(function(a,b){return b[1]-a[1];});
+  var labels  = entries.map(function(e){return e[0];});
+  var data    = entries.map(function(e){return e[1];});
+  var palette = ['#0176d3','#2e844a','#7526e3','#dd7a01','#c23934','#014486','#06857b','#e4a201','#0a5ea8','#1d7a3a'];
+  if (charts.ka) charts.ka.destroy();
+  charts.ka = new Chart(document.getElementById('chartKAByEng'), {
+    type:'doughnut',
+    data:{labels:labels, datasets:[{data:data, backgroundColor:palette.slice(0,labels.length), borderWidth:3, borderColor:'#fff', hoverOffset:6}]},
+    options:{
+      plugins:{
+        legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:14,color:'#5a6278'}}
+      },
+      cutout:'65%'
+    }
+  });
+}
+
+function recBadge(status) {
+  if (status==='missing') return '<span class="badge badge-new">Draft KA Needed</span>';
+  if (status==='voc')     return '<span class="badge badge-voc">VOC Opportunity</span>';
+  if (status==='partial') return '<span class="badge badge-partial">Update Article</span>';
+  return '<span class="badge badge-ok">Article Exists</span>';
+}
+
+function renderGapTable() {
+  var topicData = {};
+  filtered.forEach(function(c) {
+    var t = getTopic(c.subject, c.topic);
+    if (!topicData[t]) topicData[t] = {count:0, engineers:{}};
+    topicData[t].count++;
+    topicData[t].engineers[c.owner] = true;
+  });
+  var rows = Object.entries(topicData).sort(function(a,b){return b[1].count-a[1].count;});
+  var tbody = document.getElementById('gapBody');
+  while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+
+  if (!rows.length) {
+    var empty = document.createElement('tr');
+    var td = document.createElement('td');
+    td.colSpan = 6; td.className = 'empty'; td.textContent = 'No cases match the current filters.';
+    empty.appendChild(td); tbody.appendChild(empty); return;
+  }
+
+  rows.forEach(function(entry) {
+    var topic = entry[0], info = entry[1];
+    var ka = TOPIC_KA_MAP[topic] || {status:'missing', artNum:'', artTitle:'', missing:'No data'};
+    var tr = document.createElement('tr');
+    var rowClass = {missing:'row-missing',voc:'row-voc',partial:'row-missing',exists:'row-ok'}[ka.status]||'';
+    if (rowClass) tr.className = rowClass;
+
+    // col 0: topic
+    var td0 = document.createElement('td');
+    var b = document.createElement('strong'); b.textContent = topic; td0.appendChild(b); tr.appendChild(td0);
+
+    // col 1: count
+    var td1 = document.createElement('td');
+    var b1 = document.createElement('strong'); b1.textContent = info.count; td1.appendChild(b1); tr.appendChild(td1);
+
+    // col 2: recommendation badge (safe static HTML)
+    var td2 = document.createElement('td'); td2.innerHTML = recBadge(ka.status); tr.appendChild(td2);
+
+    // col 3: article link (safe – artNum and artTitle are internal constants)
+    var td3 = document.createElement('td');
+    if (ka.artUrlName) {
+      var a = document.createElement('a');
+      a.className = 'art-link'; a.target = '_blank';
+      a.href = 'https://orgcs.my.salesforce.com/articles/Knowledge/' + esc(ka.artUrlName);
+      a.textContent = '📄 ' + ka.artTitle;
+      td3.appendChild(a);
+    } else {
+      var noart = document.createElement('span');
+      noart.style.cssText = 'color:#706e6b;font-size:.78rem;';
+      noart.textContent = 'No article found';
+      td3.appendChild(noart);
+    }
+    tr.appendChild(td3);
+
+    // col 4: gap text
+    var td4 = document.createElement('td');
+    var span4 = document.createElement('span'); span4.className = 'missing-tag';
+    span4.textContent = '⚠ ' + ka.missing; td4.appendChild(span4); tr.appendChild(td4);
+
+    // col 5: engineers (safe – names from Salesforce data, escaped)
+    var td5 = document.createElement('td');
+    Object.keys(info.engineers).forEach(function(eng) {
+      var pill = document.createElement('span'); pill.className = 'topic-pill'; pill.textContent = eng;
+      td5.appendChild(pill);
+    });
+    tr.appendChild(td5);
+
+    tbody.appendChild(tr);
+  });
+}
+
+function renderEngTable() {
+  var engData = {};
+  filtered.forEach(function(c) {
+    if (!engData[c.owner]) engData[c.owner] = {manager:c.manager, cases:0, topics:{}};
+    engData[c.owner].cases++;
+    engData[c.owner].topics[getTopic(c.subject, c.topic)] = true;
+  });
+
+  var kaByEng = {};
+  KA.forEach(function(k){ if (!kaByEng[k.author]) kaByEng[k.author]=[]; kaByEng[k.author].push({title:k.title,urlName:k.urlName}); });
+
+  var maxCases = 1;
+  Object.values(engData).forEach(function(e){ if(e.cases>maxCases) maxCases=e.cases; });
+
+  var tbody = document.getElementById('engBody');
+  while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+
+  Object.entries(engData)
+    .sort(function(a,b){ return (kaByEng[b[0]]||[]).length-(kaByEng[a[0]]||[]).length; })
+    .forEach(function(entry) {
+      var eng = entry[0], info = entry[1];
+      var ka = kaByEng[eng] || [];
+      var pct = Math.round(info.cases/maxCases*100);
+      var tr = document.createElement('tr');
+
+      var td0=document.createElement('td');
+      var initials=eng.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase();
+      var cellDiv=document.createElement('div'); cellDiv.className='eng-cell';
+      var av=document.createElement('div'); av.className='eng-avatar'; av.textContent=initials;
+      var nameDiv=document.createElement('div'); nameDiv.className='eng-name'; nameDiv.textContent=eng;
+      cellDiv.appendChild(av); cellDiv.appendChild(nameDiv);
+      td0.appendChild(cellDiv); tr.appendChild(td0);
+      var td1=document.createElement('td'); var sub1=document.createElement('span'); sub1.className='eng-sub'; sub1.textContent=info.manager; td1.appendChild(sub1); tr.appendChild(td1);
+      var td2=document.createElement('td'); var chip=document.createElement('span'); chip.className='cnt-chip'+(info.cases>5?' hi':''); chip.textContent=info.cases; td2.appendChild(chip); tr.appendChild(td2);
+      var td3=document.createElement('td'); var b3=document.createElement('strong'); b3.style.cssText='color:var(--brand);font-size:.9rem;'; b3.textContent=ka.length; td3.appendChild(b3); tr.appendChild(td3);
+
+      var td4=document.createElement('td');
+      if (ka.length) {
+        ka.slice(0,3).forEach(function(t){
+          var pill=document.createElement('span'); pill.className='topic-pill';
+          pill.title=t.title; pill.textContent=t.title.length>42?t.title.substring(0,40)+'…':t.title;
+          td4.appendChild(pill);
+        });
+      } else {
+        var none=document.createElement('span'); none.style.cssText='color:var(--text-muted);font-size:.75rem;'; none.textContent='None this period'; td4.appendChild(none);
+      }
+      tr.appendChild(td4);
+
+      var td5=document.createElement('td');
+      var outer=document.createElement('div'); outer.className='progress-bar-outer';
+      var inner=document.createElement('div'); inner.className='progress-bar-inner'; inner.style.width=pct+'%';
+      outer.appendChild(inner); td5.appendChild(outer);
+      var lbl=document.createElement('span'); lbl.style.cssText='font-size:.72rem;color:var(--text-muted);margin-left:6px;'; lbl.textContent=info.cases+' cases'; td5.appendChild(lbl);
+      tr.appendChild(td5);
+
+      tbody.appendChild(tr);
+    });
+}
+
+function renderMgrTable() {
+  var mgrData = {};
+  filtered.forEach(function(c) {
+    if (!mgrData[c.manager]) mgrData[c.manager]={engineers:{},cases:0,topics:{}};
+    mgrData[c.manager].engineers[c.owner]=true;
+    mgrData[c.manager].cases++;
+    var t=getTopic(c.subject, c.topic);
+    mgrData[c.manager].topics[t]=(mgrData[c.manager].topics[t]||0)+1;
+  });
+
+  var kaByEng = {};
+  KA.forEach(function(k){ kaByEng[k.author]=(kaByEng[k.author]||0)+1; });
+
+  var tbody = document.getElementById('mgrBody');
+  while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+
+  Object.entries(mgrData)
+    .sort(function(a,b){ return b[1].cases-a[1].cases; })
+    .forEach(function(entry) {
+      var mgr=entry[0], info=entry[1];
+      var mgrKA=Object.keys(info.engineers).reduce(function(s,e){ return s+(kaByEng[e]||0); },0);
+
+      var topTopics = Object.entries(info.topics)
+        .sort(function(a,b){return b[1]-a[1];}).slice(0,3);
+
+      var vocTopics = Object.entries(info.topics)
+        .filter(function(t){ var ka=TOPIC_KA_MAP[t[0]]; return ka&&(ka.status==='missing'||ka.status==='voc'); })
+        .map(function(t){ return t[0]; });
+
+      var tr=document.createElement('tr');
+      var td0=document.createElement('td'); var b0=document.createElement('strong'); b0.textContent=mgr; td0.appendChild(b0); tr.appendChild(td0);
+      var td1=document.createElement('td'); td1.textContent=Object.keys(info.engineers).length; tr.appendChild(td1);
+      var td2=document.createElement('td'); td2.textContent=info.cases; tr.appendChild(td2);
+      var td3=document.createElement('td'); var b3=document.createElement('strong'); b3.style.color='var(--brand)'; b3.textContent=mgrKA; td3.appendChild(b3); tr.appendChild(td3);
+
+      var td4=document.createElement('td');
+      topTopics.forEach(function(t){
+        var pill=document.createElement('span'); pill.className='topic-pill'; pill.textContent=t[0]; td4.appendChild(pill);
+        var ka=TOPIC_KA_MAP[t[0]];
+        if (ka&&(ka.status==='missing'||ka.status==='voc')) {
+          var gap=document.createElement('span'); gap.className='missing-tag'; gap.textContent='gap'; td4.appendChild(gap);
+        }
+      });
+      tr.appendChild(td4);
+
+      var td5=document.createElement('td');
+      if (vocTopics.length) {
+        vocTopics.forEach(function(t){
+          var badge=document.createElement('span'); badge.className='badge badge-voc'; badge.style.margin='2px'; badge.textContent=t; td5.appendChild(badge);
+        });
+      } else {
+        var none=document.createElement('span'); none.style.cssText='color:var(--text-muted);font-size:.75rem;'; none.textContent='None identified'; td5.appendChild(none);
+      }
+      tr.appendChild(td5);
+
+      tbody.appendChild(tr);
+    });
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    var t = tab.getAttribute('data-tab');
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});
+    document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active');});
+    tab.classList.add('active');
+    document.getElementById('tab-'+t).classList.add('active');
+  });
+});
+
+// ── SORT ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('th[data-col]').forEach(function(th){
+  th.addEventListener('click', function(){
+    var col = parseInt(th.getAttribute('data-col'));
+    var tbl = th.getAttribute('data-tbl');
+    var key = tbl+'-'+col;
+    sortDir[key] = !sortDir[key];
+    var dir = sortDir[key] ? 1 : -1;
+    var tbodyId = tbl==='gap'?'gapBody':tbl==='eng'?'engBody':'mgrBody';
+    var tbody = document.getElementById(tbodyId);
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort(function(a,b){
+      var at=(a.cells[col]&&a.cells[col].textContent)||'';
+      var bt=(b.cells[col]&&b.cells[col].textContent)||'';
+      var an=parseFloat(at), bn=parseFloat(bt);
+      if (!isNaN(an)&&!isNaN(bn)) return (an-bn)*dir;
+      return at.localeCompare(bt)*dir;
+    });
+    rows.forEach(function(r){ tbody.appendChild(r); });
+  });
+});
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+initFilters();
+render();
+</script>
+
+<div class="dash-footer">
+  Krishna DV Org &nbsp;·&nbsp; Data window: last 30 days &nbsp;·&nbsp; KA data: OrgCS KnowledgeArticleVersion &nbsp;·&nbsp; Swarm lead map: hardcoded from org hierarchy
+</div>
+
+</body>
+</html>
