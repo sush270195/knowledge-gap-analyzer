@@ -184,7 +184,7 @@ header .stat .lbl { font-size: 10px; color: #6e7681; text-transform: uppercase; 
     <div id="no-data-state" class="no-data-state" style="display:none;">
       <div class="nd-icon">📊</div>
       <div class="nd-title" id="nd-title">No data collected yet</div>
-      <div class="nd-sub">Case analysis has not been run for this person yet.<br>Run a 30-day case query in OrgCS to populate this view.</div>
+      <div class="nd-sub" id="nd-sub">Case analysis has not been run for this person yet.<br>Run a 30-day case query in OrgCS to populate this view.</div>
     </div>
     <table class="gap-table" id="main-table" style="display:none;">
       <thead>
@@ -689,6 +689,16 @@ function setPerson(id) {
 
 function onPersonChange() {
   const person = activePerson();
+  // For swarm leads with no hand-crafted data, try to aggregate on-demand
+  if (currentScope === "swarm" && (!person.themes || person.themes.length === 0)) {
+    const slMap = buildSwarmLeadMap();
+    const engIds = slMap[person.id] || [];
+    const agg = buildSwarmLeadThemes(engIds);
+    if (agg.length > 0) {
+      person.themes = agg;
+      person.totalCases = agg.reduce((s, t) => s + t.caseCount, 0);
+    }
+  }
   updateHeader(person);
   if (person.themes && person.themes.length > 0) {
     state.topics = new Set(person.themes.map(t => t.id));
@@ -795,6 +805,12 @@ function render() {
     tableEl.style.display = "none";
     prioritySection.style.display = "none";
     document.getElementById("nd-title").textContent = "No data collected yet for " + person.name;
+    const ndSub = document.getElementById("nd-sub");
+    if (currentScope === "swarm") {
+      ndSub.textContent = "No engineer-level theme data is available for this swarm lead's team. Populate engineer data first, then the swarm view will aggregate automatically.";
+    } else {
+      ndSub.textContent = "Case analysis has not been run for this person yet. Run a 30-day case query in OrgCS to populate this view.";
+    }
     document.getElementById("result-count").textContent = "No case data available";
     document.getElementById("stat-cases").textContent = "—";
     document.getElementById("stat-themes").textContent = "—";
@@ -998,6 +1014,41 @@ function exportCSV() {
   a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
   a.download = "knowledge-gap-" + person.id + ".csv";
   a.click();
+}
+
+// ── Swarm lead → engineers map ────────────────────────────────────────────────
+// Built from SCOPE_PEOPLE.engineer group strings which encode the swarm lead name.
+// Format: "Mayank Gairola · Sushmita Srivastava" — the last token after " · " is the swarm lead.
+function buildSwarmLeadMap() {
+  const slMap = {}; // swarm lead id → [engineer ids]
+  SCOPE_PEOPLE.engineer.forEach(eng => {
+    const parts = eng.group.split(" · ");
+    const slName = parts[parts.length - 1].trim();
+    const sl = SCOPE_PEOPLE.swarm.find(s => s.name === slName);
+    if (!sl) return;
+    if (!slMap[sl.id]) slMap[sl.id] = [];
+    slMap[sl.id].push(eng.id);
+  });
+  return slMap;
+}
+
+function buildSwarmLeadThemes(engineerIds) {
+  // Aggregate engineer-level theme data under a swarm lead.
+  // We use the same theme IDs as THEMES_HARIKA but sum case counts and created KA/VOC.
+  const themeMap = {};
+  engineerIds.forEach(eid => {
+    const eng = SCOPE_PEOPLE.engineer.find(e => e.id === eid);
+    if (!eng || !eng.themes) return;
+    eng.themes.forEach(t => {
+      if (!themeMap[t.id]) {
+        themeMap[t.id] = Object.assign({}, t, { caseCount: 0, created: { ka: 0, voc: 0 } });
+      }
+      themeMap[t.id].caseCount += t.caseCount;
+      themeMap[t.id].created.ka  += t.created.ka;
+      themeMap[t.id].created.voc += t.created.voc;
+    });
+  });
+  return Object.values(themeMap).sort((a, b) => b.caseCount - a.caseCount);
 }
 
 // ── Live case counts (Salesforce REST API) ─────────────────────────────────────
@@ -1313,6 +1364,84 @@ const SF_UID_TO_PERSON_ID = Object.fromEntries(
   Object.entries(SF_USER_IDS).map(([pid, uid]) => [uid, pid])
 );
 
+async function fetchLiveKACreated() {
+  // Fetch KA articles authored by engineers in the last 90 days (Draft + Published).
+  // Updates created.ka counts on engineer theme data, then re-aggregates swarm/manager.
+  if (!window.location.hostname.includes("salesforce.com") &&
+      !window.location.hostname.includes("force.com")) return;
+
+  try {
+    const since = new Date();
+    since.setDate(since.getDate() - 90);
+    const sinceStr = since.toISOString().split("T")[0] + "T00:00:00Z";
+
+    const userIds = Object.values(SF_USER_IDS);
+    const BATCH = 180;
+    const kaCountMap = {}; // uid → count of KAs authored
+
+    for (let i = 0; i < userIds.length; i += BATCH) {
+      const batch = userIds.slice(i, i + BATCH);
+      const inList = batch.map(id => "'" + id + "'").join(",");
+      // PublishStatus IN ('Draft','Online') covers in-progress and published KAs
+      const soql = "SELECT CreatedById, COUNT(Id) kaCount FROM KnowledgeArticleVersion " +
+                   "WHERE CreatedDate >= " + sinceStr +
+                   " AND PublishStatus IN ('draft','online')" +
+                   " AND Language = 'en_US'" +
+                   " AND CreatedById IN (" + inList + ") GROUP BY CreatedById";
+      const url = "/services/data/v64.0/query?q=" + encodeURIComponent(soql);
+      const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!resp.ok) throw new Error("KA API error " + resp.status);
+      const data = await resp.json();
+      (data.records || []).forEach(r => { kaCountMap[r.CreatedById] = r.kaCount; });
+    }
+
+    // Apply to engineer themes — we reset all to 0 first, then apply live counts.
+    // Each engineer gets a single aggregate KA count spread across their top theme
+    // (theme-level KA attribution would require topic tagging in KAV, which isn't available).
+    // Instead, store the total on the person object and display it as an overall stat.
+    SCOPE_PEOPLE.engineer.forEach(eng => {
+      const uid = SF_USER_IDS[eng.id];
+      if (!uid) return;
+      const liveKA = kaCountMap[uid] || 0;
+      eng.liveKATotal = liveKA;
+      // Distribute live KA counts across themes proportionally by case count
+      if (eng.themes && eng.themes.length > 0 && liveKA > 0) {
+        const totalCases = eng.themes.reduce((s, t) => s + t.caseCount, 0) || 1;
+        let assigned = 0;
+        eng.themes.forEach((t, idx) => {
+          if (idx === eng.themes.length - 1) {
+            t.created.ka = liveKA - assigned; // remainder to last theme
+          } else {
+            const share = Math.round((t.caseCount / totalCases) * liveKA);
+            t.created.ka = share;
+            assigned += share;
+          }
+        });
+      } else if (eng.themes) {
+        eng.themes.forEach(t => { t.created.ka = 0; });
+      }
+    });
+
+    // Re-aggregate swarm lead themes
+    const slMap = buildSwarmLeadMap();
+    SCOPE_PEOPLE.swarm.forEach(sl => {
+      const engIds = slMap[sl.id] || [];
+      const freshThemes = buildSwarmLeadThemes(engIds);
+      if (freshThemes.length > 0) {
+        sl.themes = freshThemes;
+        sl.totalCases = freshThemes.reduce((s, t) => s + t.caseCount, 0);
+      }
+    });
+
+    // Re-render if current view is swarm
+    rebuildPersonList(document.getElementById("person-search").value || "");
+    render();
+    console.log("Live KA counts loaded:", kaCountMap);
+  } catch (e) {
+    console.warn("Live KA count fetch failed:", e);
+  }
+}
+
 async function fetchLiveCaseCounts() {
   // Only runs when hosted on Salesforce (not from file://)
   if (!window.location.hostname.includes("salesforce.com") &&
@@ -1363,6 +1492,20 @@ async function fetchLiveCaseCounts() {
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
+// Pre-aggregate swarm lead data from engineer-level themes (works offline too)
+(function seedSwarmLeadData() {
+  const slMap = buildSwarmLeadMap();
+  SCOPE_PEOPLE.swarm.forEach(sl => {
+    if (sl.themes) return; // already has hand-crafted data
+    const engIds = slMap[sl.id] || [];
+    const agg = buildSwarmLeadThemes(engIds);
+    if (agg.length > 0) {
+      sl.themes = agg;
+      sl.totalCases = agg.reduce((s, t) => s + t.caseCount, 0);
+    }
+  });
+})();
+
 buildStaticFilters();
 rebuildPersonList("");
 const firstPerson = activePerson();
@@ -1372,6 +1515,7 @@ rebuildTopicFilters();
 renderSources();
 render();
 fetchLiveCaseCounts();
+fetchLiveKACreated();
 </script>
 </body>
 </html>
