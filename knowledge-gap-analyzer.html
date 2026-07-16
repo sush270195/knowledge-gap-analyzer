@@ -217,6 +217,66 @@ input[type=range] { width: 100%; accent-color: #1f6feb; cursor: pointer; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #30363d; }
+
+/* ── Live dot ────────────────────────────────────────────────────────────────── */
+@keyframes live-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.45; transform:scale(0.82); } }
+.live-dot {
+  display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:#3fb950; animation:live-pulse 1.8s ease-in-out infinite;
+  margin-left:8px; vertical-align:middle; flex-shrink:0;
+}
+.live-dot.syncing { background:#d29922; }
+
+/* ── KA Articles popup ───────────────────────────────────────────────────────── */
+.ka-popup-overlay { position:fixed; inset:0; z-index:199; }
+.ka-articles-popup {
+  position:fixed; z-index:200;
+  background:#161b22; border:1px solid #30363d; border-radius:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.65); min-width:300px; max-width:500px;
+  overflow:hidden;
+}
+.ka-popup-header {
+  padding:10px 14px; border-bottom:1px solid #21262d;
+  font-size:10px; text-transform:uppercase; letter-spacing:0.1em;
+  color:#8b949e; font-weight:700; display:flex; align-items:center; justify-content:space-between;
+}
+.ka-popup-close {
+  background:none; border:none; color:#484f58; cursor:pointer;
+  font-size:16px; padding:0 2px; line-height:1; transition:color 0.1s;
+}
+.ka-popup-close:hover { color:#c9d1d9; }
+.ka-popup-body { padding:6px 0; max-height:280px; overflow-y:auto; }
+.ka-article-item {
+  padding:7px 14px; display:flex; align-items:flex-start; gap:8px;
+  transition:background 0.1s;
+}
+.ka-article-item:hover { background:#1f2937; }
+.ka-article-num {
+  font-size:9px; color:#484f58; font-weight:700; white-space:nowrap;
+  flex-shrink:0; margin-top:2px; letter-spacing:0.03em;
+  background:#21262d; padding:1px 5px; border-radius:4px;
+}
+.ka-article-link {
+  color:#58a6ff; text-decoration:none; font-size:11px; line-height:1.45; flex:1;
+}
+.ka-article-link:hover { text-decoration:underline; color:#79b8ff; }
+.ka-popup-empty { padding:16px; text-align:center; font-size:11px; color:#6e7681; }
+.ka-popup-footer {
+  padding:6px 14px; border-top:1px solid #21262d;
+  font-size:9px; color:#484f58; text-align:right;
+}
+
+/* ── Clickable created count ─────────────────────────────────────────────────── */
+.created-count.clickable {
+  cursor:pointer; border-radius:4px; transition:all 0.15s;
+  padding:1px 4px; margin:-1px -4px; text-decoration:underline; text-decoration-style:dotted;
+}
+.created-count.clickable:hover { background:rgba(63,185,80,0.18); transform:scale(1.06); text-decoration:none; }
+
+/* ── Stat tile clickable ─────────────────────────────────────────────────────── */
+.stat.has-articles { cursor:pointer; }
+.stat.has-articles:hover .val { text-shadow:0 0 8px rgba(63,185,80,0.5); }
+.stat.has-articles:hover { background:rgba(63,185,80,0.06); }
 </style>
 </head>
 <body>
@@ -230,7 +290,7 @@ input[type=range] { width: 100%; accent-color: #1f6feb; cursor: pointer; }
     <div class="stat"><div class="val" id="stat-cases">—</div><div class="lbl">Cases (30d)</div></div>
     <div class="stat"><div class="val" id="stat-themes">—</div><div class="lbl">Themes</div></div>
     <div class="stat"><div class="val" id="stat-gaps">—</div><div class="lbl">Gaps</div></div>
-    <div class="stat"><div class="val green" id="stat-created-ka">—</div><div class="lbl" id="lbl-ka">KAs Created</div></div>
+    <div class="stat" id="stat-ka-tile" title="Click to view KA articles"><div class="val green" id="stat-created-ka">—</div><div class="lbl" id="lbl-ka">KAs Created<span class="live-dot syncing" id="live-dot" title="Syncing live data…"></span></div></div>
     <div class="stat"><div class="val green" id="stat-created-voc">—</div><div class="lbl" id="lbl-voc">VOCs Created</div></div>
   </div>
 </header>
@@ -865,10 +925,21 @@ function makeTitleBlock(labelText, labelColor, titleText) {
   return block;
 }
 
-function makeCreatedCell(created) {
+function makeCreatedCell(created, themeId) {
   const cell = el("div", "created-cell");
   const kaItem = el("div", "created-item");
-  kaItem.appendChild(el("span", "created-count " + (created.ka > 0 ? "has-count" : "zero"), String(created.ka)));
+  const kaCount = el("span", "created-count " + (created.ka > 0 ? "has-count" : "zero"), String(created.ka));
+  if (created.ka > 0) {
+    kaCount.classList.add("clickable");
+    kaCount.title = "Click to view KA articles";
+    kaCount.addEventListener("click", function(e) {
+      e.stopPropagation();
+      const arts = getPersonKAArticles();
+      const person = activePerson();
+      showKAPopup(arts, person.name + " · KA Articles Created", kaCount);
+    });
+  }
+  kaItem.appendChild(kaCount);
   kaItem.appendChild(makeTag("tag-ka", "📄 KA"));
   cell.appendChild(kaItem);
   const vocItem = el("div", "created-item");
@@ -968,7 +1039,7 @@ function render() {
       tr.appendChild(tdRec);
 
       const tdCreated = el("td");
-      tdCreated.appendChild(makeCreatedCell(theme.created));
+      tdCreated.appendChild(makeCreatedCell(theme.created, theme.id));
       tr.appendChild(tdCreated);
 
       const tdTitle = el("td");
@@ -1493,7 +1564,7 @@ async function fetchLiveKACreated() {
       // PublishStatus IN ('Draft','Online') covers in-progress and published KAs
       const soql = "SELECT CreatedById, COUNT(Id) kaCount FROM KnowledgeArticleVersion " +
                    "WHERE CreatedDate >= " + sinceStr +
-                   " AND PublishStatus IN ('draft','online')" +
+                   " AND PublishStatus IN ('Draft','Online')" +
                    " AND Language = 'en_US'" +
                    " AND CreatedById IN (" + inList + ") GROUP BY CreatedById";
       const url = "/services/data/v64.0/query?q=" + encodeURIComponent(soql);
@@ -1501,6 +1572,35 @@ async function fetchLiveKACreated() {
       if (!resp.ok) throw new Error("KA API error " + resp.status);
       const data = await resp.json();
       (data.records || []).forEach(r => { kaCountMap[r.CreatedById] = r.kaCount; });
+    }
+
+    // Fetch actual article titles for engineers who have KAs
+    const authorsWithKA = Object.keys(kaCountMap);
+    const kaDetailMap = {}; // uid → [{num, title, url}]
+    if (authorsWithKA.length > 0) {
+      const DETAIL_BATCH = 50;
+      for (let i = 0; i < authorsWithKA.length; i += DETAIL_BATCH) {
+        const batch = authorsWithKA.slice(i, i + DETAIL_BATCH);
+        const inList2 = batch.map(id => "'" + id + "'").join(",");
+        const soqlD = "SELECT ArticleNumber, Title, CreatedById FROM KnowledgeArticleVersion " +
+                      "WHERE CreatedDate >= " + sinceStr +
+                      " AND PublishStatus IN ('Draft','Online')" +
+                      " AND Language = 'en_US'" +
+                      " AND CreatedById IN (" + inList2 + ") ORDER BY CreatedDate DESC LIMIT 200";
+        const urlD = "/services/data/v64.0/query?q=" + encodeURIComponent(soqlD);
+        const respD = await fetch(urlD, { headers: { "Accept": "application/json" } });
+        if (respD.ok) {
+          const dataD = await respD.json();
+          (dataD.records || []).forEach(r => {
+            if (!kaDetailMap[r.CreatedById]) kaDetailMap[r.CreatedById] = [];
+            kaDetailMap[r.CreatedById].push({
+              num: r.ArticleNumber,
+              title: r.Title,
+              url: window.location.origin + "/articles/Knowledge/" + r.ArticleNumber
+            });
+          });
+        }
+      }
     }
 
     // Apply to engineer themes — we reset all to 0 first, then apply live counts.
@@ -1512,6 +1612,7 @@ async function fetchLiveKACreated() {
       if (!uid) return;
       const liveKA = kaCountMap[uid] || 0;
       eng.liveKATotal = liveKA;
+      eng.liveKAArticles = kaDetailMap[uid] || [];
       // Distribute live KA counts across themes proportionally by case count
       if (eng.themes && eng.themes.length > 0 && liveKA > 0) {
         const totalCases = eng.themes.reduce((s, t) => s + t.caseCount, 0) || 1;
@@ -1544,9 +1645,14 @@ async function fetchLiveKACreated() {
     // Re-render if current view is swarm
     rebuildPersonList(document.getElementById("person-search").value || "");
     render();
+    // Mark live dot green — data loaded
+    const dot = document.getElementById("live-dot");
+    if (dot) { dot.classList.remove("syncing"); dot.title = "Live data loaded"; }
     console.log("Live KA counts loaded:", kaCountMap);
   } catch (e) {
     console.warn("Live KA count fetch failed:", e);
+    const dot = document.getElementById("live-dot");
+    if (dot) { dot.style.background = "#f85149"; dot.style.animation = "none"; dot.title = "Live data unavailable"; }
   }
 }
 
@@ -1599,6 +1705,103 @@ async function fetchLiveCaseCounts() {
   }
 }
 
+// ── KA Articles Popup ──────────────────────────────────────────────────────────
+let kaPopupEl = null;
+let kaOverlayEl = null;
+
+function showKAPopup(articles, title, anchorEl) {
+  closeKAPopup();
+
+  kaOverlayEl = document.createElement("div");
+  kaOverlayEl.className = "ka-popup-overlay";
+  kaOverlayEl.addEventListener("click", closeKAPopup);
+  document.body.appendChild(kaOverlayEl);
+
+  kaPopupEl = document.createElement("div");
+  kaPopupEl.className = "ka-articles-popup";
+  kaPopupEl.addEventListener("click", e => e.stopPropagation());
+
+  const hdr = document.createElement("div");
+  hdr.className = "ka-popup-header";
+  hdr.appendChild(Object.assign(document.createTextNode(title), {}));
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "ka-popup-close"; closeBtn.textContent = "×";
+  closeBtn.addEventListener("click", closeKAPopup);
+  hdr.appendChild(closeBtn);
+  kaPopupEl.appendChild(hdr);
+
+  const body = document.createElement("div");
+  body.className = "ka-popup-body";
+
+  if (!articles || articles.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "ka-popup-empty";
+    empty.textContent = "No KA articles found for this period.";
+    body.appendChild(empty);
+  } else {
+    articles.forEach(art => {
+      const item = document.createElement("div");
+      item.className = "ka-article-item";
+      const num = document.createElement("span");
+      num.className = "ka-article-num"; num.textContent = art.num;
+      const link = document.createElement("a");
+      link.className = "ka-article-link"; link.href = art.url;
+      link.target = "_blank"; link.rel = "noopener";
+      link.textContent = art.title || art.num;
+      item.appendChild(num); item.appendChild(link);
+      body.appendChild(item);
+    });
+  }
+  kaPopupEl.appendChild(body);
+
+  const footer = document.createElement("div");
+  footer.className = "ka-popup-footer";
+  footer.textContent = (articles && articles.length ? articles.length : 0) + " article(s) · Last 90 days · Opens in OrgCS";
+  kaPopupEl.appendChild(footer);
+
+  document.body.appendChild(kaPopupEl);
+
+  // Position relative to anchor
+  const rect = anchorEl.getBoundingClientRect();
+  const popW = 460;
+  let left = rect.left + rect.width / 2 - popW / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
+  let top = rect.bottom + 8;
+  kaPopupEl.style.left = left + "px";
+  kaPopupEl.style.top = top + "px";
+  kaPopupEl.style.width = popW + "px";
+}
+
+function closeKAPopup() {
+  if (kaPopupEl) { kaPopupEl.remove(); kaPopupEl = null; }
+  if (kaOverlayEl) { kaOverlayEl.remove(); kaOverlayEl = null; }
+}
+
+function getPersonKAArticles() {
+  const person = activePerson();
+  // For engineer scope, use their liveKAArticles
+  if (currentScope === "engineer") {
+    return person.liveKAArticles || [];
+  }
+  // For swarm/manager, aggregate from engineers
+  const slMap = buildSwarmLeadMap();
+  const engIds = currentScope === "swarm" ? (slMap[person.id] || []) :
+    SCOPE_PEOPLE.engineer.filter(e => {
+      // find engineers whose group chain contains this manager
+      return e.group.includes(person.name);
+    }).map(e => e.id);
+  const seen = new Set();
+  const arts = [];
+  engIds.forEach(eid => {
+    const eng = SCOPE_PEOPLE.engineer.find(e => e.id === eid);
+    if (!eng || !eng.liveKAArticles) return;
+    eng.liveKAArticles.forEach(a => {
+      if (!seen.has(a.num)) { seen.add(a.num); arts.push(a); }
+    });
+  });
+  return arts;
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 // Pre-aggregate swarm lead data from engineer-level themes (works offline too)
 (function seedSwarmLeadData() {
@@ -1624,6 +1827,17 @@ renderSources();
 render();
 fetchLiveCaseCounts();
 fetchLiveKACreated();
+
+// Wire KA stat tile click → popup
+const kaTile = document.getElementById("stat-ka-tile");
+if (kaTile) {
+  kaTile.addEventListener("click", function(e) {
+    const arts = getPersonKAArticles();
+    const person = activePerson();
+    showKAPopup(arts, person.name + " · KA Articles Created", kaTile);
+  });
+  kaTile.classList.add("has-articles");
+}
 </script>
 </body>
 </html>
