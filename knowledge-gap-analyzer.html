@@ -1561,8 +1561,8 @@ async function fetchLiveKACreated() {
     for (let i = 0; i < userIds.length; i += BATCH) {
       const batch = userIds.slice(i, i + BATCH);
       const inList = batch.map(id => "'" + id + "'").join(",");
-      // PublishStatus IN ('Draft','Online') covers in-progress and published KAs
-      const soql = "SELECT CreatedById, COUNT(Id) kaCount FROM KnowledgeArticleVersion " +
+      // COUNT(KnowledgeArticleId) deduplicates Draft+Online versions of the same article
+      const soql = "SELECT CreatedById, COUNT(KnowledgeArticleId) kaCount FROM KnowledgeArticleVersion " +
                    "WHERE CreatedDate >= " + sinceStr +
                    " AND PublishStatus IN ('Draft','Online')" +
                    " AND Language = 'en_US'" +
@@ -1582,9 +1582,11 @@ async function fetchLiveKACreated() {
       for (let i = 0; i < authorsWithKA.length; i += DETAIL_BATCH) {
         const batch = authorsWithKA.slice(i, i + DETAIL_BATCH);
         const inList2 = batch.map(id => "'" + id + "'").join(",");
-        const soqlD = "SELECT ArticleNumber, Title, CreatedById FROM KnowledgeArticleVersion " +
+        // Use PublishStatus = 'Draft' to get one row per article (avoids Draft+Online duplication)
+        // Fall back to 'Online' only if needed — Draft always exists while article is being worked on
+        const soqlD = "SELECT ArticleNumber, UrlName, Title, CreatedById FROM KnowledgeArticleVersion " +
                       "WHERE CreatedDate >= " + sinceStr +
-                      " AND PublishStatus IN ('Draft','Online')" +
+                      " AND PublishStatus = 'Draft'" +
                       " AND Language = 'en_US'" +
                       " AND CreatedById IN (" + inList2 + ") ORDER BY CreatedDate DESC LIMIT 200";
         const urlD = "/services/data/v64.0/query?q=" + encodeURIComponent(soqlD);
@@ -1596,7 +1598,7 @@ async function fetchLiveKACreated() {
             kaDetailMap[r.CreatedById].push({
               num: r.ArticleNumber,
               title: r.Title,
-              url: window.location.origin + "/articles/Knowledge/" + r.ArticleNumber
+              url: "https://orgcs.my.salesforce.com/articles/Knowledge/" + encodeURIComponent(r.UrlName)
             });
           });
         }
