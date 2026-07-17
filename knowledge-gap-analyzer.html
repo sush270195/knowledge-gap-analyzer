@@ -91,7 +91,7 @@ header .stat .lbl { font-size: 9px; color: #6e7681; text-transform: uppercase; l
 }
 .person-btn.has-data .p-avatar { background: #0f2a1d; color: #3fb950; }
 .person-btn.active .p-avatar { background: #1f6feb22; color: #58a6ff; }
-.person-btn .p-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-btn .p-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size:11px; }
 .person-btn .p-badge {
   flex-shrink: 0; font-size: 8px; background: #21262d; color: #6e7681;
   padding: 1px 5px; border-radius: 8px; font-weight: 700; letter-spacing: 0.02em;
@@ -277,6 +277,65 @@ input[type=range] { width: 100%; accent-color: #1f6feb; cursor: pointer; }
 .stat.has-articles { cursor:pointer; }
 .stat.has-articles:hover .val { text-shadow:0 0 8px rgba(63,185,80,0.5); }
 .stat.has-articles:hover { background:rgba(63,185,80,0.06); }
+
+/* ── Coverage bar ────────────────────────────────────────────────────────────── */
+.cov-bar-wrap { display:flex; align-items:center; gap:6px; flex-direction:column; }
+.cov-bar { width:44px; height:5px; border-radius:3px; background:#21262d; overflow:hidden; margin-bottom:2px; }
+.cov-bar-fill { height:100%; border-radius:3px; }
+.cov-bar-fill.covered { background:#3fb950; width:100%; }
+.cov-bar-fill.partial  { background:#d29922; width:60%; }
+.cov-bar-fill.gap      { background:#f85149; width:20%; }
+
+/* ── Sortable columns ────────────────────────────────────────────────────────── */
+.gap-table th.sortable { cursor:pointer; user-select:none; }
+.gap-table th.sortable:hover { color:#c9d1d9; background:#1c2128; }
+.gap-table th.sort-asc::after  { content:" ↑"; color:#58a6ff; }
+.gap-table th.sort-desc::after { content:" ↓"; color:#58a6ff; }
+
+/* ── Table search ────────────────────────────────────────────────────────────── */
+.table-search {
+  padding:5px 10px 5px 28px; background:#161b22;
+  border:1px solid #21262d; border-radius:6px; color:#c9d1d9; font-size:11px;
+  outline:none; transition:border-color 0.15s; width:160px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23484f58' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:9px center;
+}
+.table-search:focus { border-color:#58a6ff; }
+.table-search::placeholder { color:#484f58; }
+
+/* ── Sidebar mini-stats ──────────────────────────────────────────────────────── */
+.person-btn .p-info { display:flex; flex-direction:column; flex:1; min-width:0; }
+.person-btn .p-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+.person-btn .p-mini-stats { font-size:9px; color:#484f58; margin-top:1px; white-space:nowrap; }
+.person-btn.active .p-mini-stats { color:#388bfd; }
+.person-btn.has-data .p-mini-stats { color:#3a5a42; }
+.person-btn.active.has-data .p-mini-stats { color:#388bfd; }
+
+/* ── Row fade-in ─────────────────────────────────────────────────────────────── */
+@keyframes row-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+.gap-table tbody tr { animation: row-in 0.18s ease both; }
+
+/* ── Compact mode ────────────────────────────────────────────────────────────── */
+.compact-btn {
+  padding:5px 10px; background:transparent; border:1px solid #30363d;
+  color:#6e7681; border-radius:6px; font-size:11px; cursor:pointer; transition:all 0.15s;
+}
+.compact-btn:hover { border-color:#58a6ff; color:#58a6ff; }
+.compact-btn.active { border-color:#3fb950; color:#3fb950; background:rgba(63,185,80,0.06); }
+body.compact .gap-table td { padding:5px 10px; }
+body.compact .title-block { padding:5px 8px; }
+body.compact header { min-height:44px; }
+body.compact header .stat .val { font-size:16px; }
+body.compact .priority-card .card-body { padding:10px 12px; }
+
+/* ── Priority collapse ───────────────────────────────────────────────────────── */
+.section-title .collapse-btn {
+  background:none; border:1px solid #30363d; color:#6e7681; border-radius:4px;
+  font-size:9px; padding:1px 7px; cursor:pointer; transition:all 0.15s; letter-spacing:0.05em;
+  font-weight:700; text-transform:uppercase;
+}
+.section-title .collapse-btn:hover { border-color:#58a6ff; color:#58a6ff; }
+.priority-cards.collapsed { display:none; }
 </style>
 </head>
 <body>
@@ -336,7 +395,9 @@ input[type=range] { width: 100%; accent-color: #1f6feb; cursor: pointer; }
 
   <main class="main" id="main-area">
     <div class="toolbar">
+      <input class="table-search" id="table-search" type="text" placeholder="Filter themes…" oninput="render()">
       <div class="result-count" id="result-count">Select a person to view their knowledge gap data</div>
+      <button class="compact-btn" id="compact-btn" onclick="toggleCompact()" title="Toggle compact view">⊟ Compact</button>
       <button class="export-btn" onclick="exportCSV()">↓ Export&nbsp;CSV</button>
     </div>
     <div id="no-data-state" class="no-data-state" style="display:none;">
@@ -348,10 +409,10 @@ input[type=range] { width: 100%; accent-color: #1f6feb; cursor: pointer; }
       <thead>
         <tr>
           <th style="width:20%">Topic / Theme</th>
-          <th style="width:7%">Cases</th>
-          <th style="width:11%">Coverage</th>
+          <th style="width:7%" id="th-cases">Cases</th>
+          <th style="width:11%" id="th-cov">Coverage</th>
           <th style="width:11%">Recommended</th>
-          <th style="width:10%" id="col-created-header">Created</th>
+          <th style="width:10%" id="th-ka">Created</th>
           <th style="width:41%">Suggested Title</th>
         </tr>
       </thead>
@@ -810,6 +871,7 @@ const SOURCES = [
 let currentScope = "engineer";
 let currentPersonId = "harika-koneti";
 let minCases = 1;
+let sortCol = null, sortDir = 1;
 
 const state = {
   coverage: new Set(["partial", "gap"]),
@@ -877,7 +939,8 @@ function updateHeader(person) {
   document.getElementById("header-subtitle").textContent =
     scopeLabels[currentScope] + " · " + person.group + " · Krishna DV Org · 2026-06-22";
   const firstNameLabel = person.name.split(" ")[0];
-  document.getElementById("col-created-header").textContent = "Created (" + firstNameLabel + ")";
+  const createdHeader = document.getElementById("th-ka");
+  if (createdHeader) createdHeader.textContent = "Created (" + firstNameLabel + ")";
   document.getElementById("lbl-ka").textContent = "KAs (" + firstNameLabel + ")";
   document.getElementById("lbl-voc").textContent = "VOCs (" + firstNameLabel + ")";
 }
@@ -993,20 +1056,33 @@ function render() {
   noDataEl.style.display = "none";
   tableEl.style.display = "table";
 
-  const visible = person.themes.filter(matches);
+  const tableQ = (document.getElementById("table-search")?.value || "").toLowerCase().trim();
+  const visible = person.themes.filter(t => matches(t) && (!tableQ || t.name.toLowerCase().includes(tableQ)));
   const tbody = document.getElementById("table-body");
   const emptyState = document.getElementById("empty-state");
 
+  const sortedVisible = [...visible];
+  if (sortCol) {
+    sortedVisible.sort((a,b) => {
+      let av, bv;
+      if (sortCol === "cases")   { av = a.caseCount; bv = b.caseCount; }
+      else if (sortCol === "cov") { const o={covered:2,partial:1,gap:0}; av=o[a.coverage]; bv=o[b.coverage]; }
+      else if (sortCol === "ka")  { av = a.created.ka; bv = b.created.ka; }
+      return (av < bv ? -1 : av > bv ? 1 : 0) * sortDir;
+    });
+  }
+
   while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
 
-  if (visible.length === 0) {
+  if (sortedVisible.length === 0) {
     emptyState.style.display = "block";
     prioritySection.style.display = "none";
   } else {
     emptyState.style.display = "none";
     prioritySection.style.display = "block";
-    visible.forEach(theme => {
+    sortedVisible.forEach((theme, index) => {
       const tr = document.createElement("tr");
+      tr.style.animationDelay = (index * 0.03) + "s";
 
       const tdName = el("td");
       tdName.appendChild(el("div", "theme-name", theme.name));
@@ -1022,8 +1098,19 @@ function render() {
       tr.appendChild(tdCount);
 
       const tdCov = el("td");
-      const covMap = { covered:["tag-covered","✅ Covered"], partial:["tag-partial","⚠️ Partial"], gap:["tag-gap","❌ Gap"] };
-      tdCov.appendChild(makeTag(covMap[theme.coverage][0], covMap[theme.coverage][1]));
+      const covMap = {
+        covered: ["tag-covered","✅ Covered",  "All major cases have KA/VOC coverage"],
+        partial: ["tag-partial","⚠️ Partial",  "Some cases covered, gaps remain — KA recommended"],
+        gap:     ["tag-gap",    "❌ Gap",      "No knowledge asset exists — high priority to create"]
+      };
+      const covWrap = el("div","cov-bar-wrap");
+      const covBar = el("div","cov-bar");
+      const fill = el("div","cov-bar-fill " + theme.coverage);
+      covBar.appendChild(fill);
+      covWrap.appendChild(covBar);
+      covWrap.appendChild(makeTag(covMap[theme.coverage][0], covMap[theme.coverage][1]));
+      covWrap.title = covMap[theme.coverage][2];
+      tdCov.appendChild(covWrap);
       tr.appendChild(tdCov);
 
       const tdRec = el("td");
@@ -1035,6 +1122,10 @@ function render() {
         if (theme.recommended.includes("ka")) wrap.appendChild(makeTag("tag-ka","📄 KA"));
         if (theme.recommended.includes("voc")) wrap.appendChild(makeTag("tag-voc","🗣️ VOC"));
         tdRec.appendChild(wrap);
+        wrap.querySelectorAll && setTimeout(() => {
+          wrap.querySelectorAll(".tag-ka").forEach(t => t.title = "Knowledge Article recommended");
+          wrap.querySelectorAll(".tag-voc").forEach(t => t.title = "Voice of Customer (VOC) post recommended");
+        }, 0);
       }
       tr.appendChild(tdRec);
 
@@ -1068,6 +1159,18 @@ function renderPriorityCards(themes) {
   const top3 = themes.filter(t => t.priorityRank > 0).sort((a,b) => a.priorityRank - b.priorityRank).slice(0,3);
   const container = document.getElementById("priority-cards");
   while (container.firstChild) container.removeChild(container.firstChild);
+  if (top3.length === 0) { document.getElementById("priority-section").style.display="none"; return; }
+  const secTitle = document.querySelector(".section-title");
+  if (secTitle && !secTitle.querySelector(".collapse-btn")) {
+    const cb = document.createElement("button");
+    cb.className = "collapse-btn";
+    cb.textContent = "Hide";
+    cb.addEventListener("click", () => {
+      container.classList.toggle("collapsed");
+      cb.textContent = container.classList.contains("collapsed") ? "Show" : "Hide";
+    });
+    secTitle.appendChild(cb);
+  }
   top3.forEach((t, i) => {
     const card = el("div","priority-card rank-" + (i+1));
     card.appendChild(el("div","card-header"));
@@ -1147,8 +1250,15 @@ function rebuildPersonList(filter) {
     const avatar = el("span","p-avatar", initials);
     btn.appendChild(avatar);
 
-    const name = el("span","p-name", p.name);
-    btn.appendChild(name);
+    const pInfo = el("div","p-info");
+    pInfo.appendChild(el("span","p-name", p.name));
+    if (p.themes) {
+      const gaps = p.themes.filter(t => t.coverage === "gap" || t.coverage === "partial").length;
+      const ka = p.themes.reduce((s,t) => s+t.created.ka, 0);
+      const mini = el("span","p-mini-stats", gaps + " gaps · " + ka + " KA");
+      pInfo.appendChild(mini);
+    }
+    btn.appendChild(pInfo);
 
     const badge = el("span","p-badge", p.role);
     btn.appendChild(badge);
@@ -1193,6 +1303,32 @@ function exportCSV() {
   a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
   a.download = "knowledge-gap-" + person.id + ".csv";
   a.click();
+}
+
+function toggleCompact() {
+  document.body.classList.toggle("compact");
+  const btn = document.getElementById("compact-btn");
+  if (btn) btn.classList.toggle("active");
+}
+
+function initSortHeaders() {
+  const headers = [
+    { id:"th-cases", col:"cases" },
+    { id:"th-cov",   col:"cov" },
+    { id:"th-ka",    col:"ka" }
+  ];
+  headers.forEach(h => {
+    const th = document.getElementById(h.id);
+    if (!th) return;
+    th.classList.add("sortable");
+    th.addEventListener("click", () => {
+      if (sortCol === h.col) sortDir *= -1;
+      else { sortCol = h.col; sortDir = -1; }
+      document.querySelectorAll(".gap-table th").forEach(t => t.classList.remove("sort-asc","sort-desc"));
+      th.classList.add(sortDir === 1 ? "sort-asc" : "sort-desc");
+      render();
+    });
+  });
 }
 
 // ── Swarm lead → engineers map ────────────────────────────────────────────────
@@ -1820,6 +1956,7 @@ function getPersonKAArticles() {
 })();
 
 buildStaticFilters();
+initSortHeaders();
 rebuildPersonList("");
 const firstPerson = activePerson();
 updateHeader(firstPerson);
