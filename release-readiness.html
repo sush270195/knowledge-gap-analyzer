@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Salesforce Release Readiness Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --brand:#0176d3;--dark:#014486;--light:#d8edff;
+  --green:#2e844a;--orange:#dd7a01;--red:#c23934;--purple:#9050e9;
+  --teal:#06857b;--yellow:#e4a201;
+  --bg:#f3f3f3;--card:#fff;--border:#dddbda;--text:#181818;--muted:#706e6b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Salesforce Sans',Arial,sans-serif;background:var(--bg);color:var(--text);}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--dark) 0%,#0e5ec7 50%,var(--brand) 100%);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.25);position:sticky;top:0;z-index:100;}
+.hdr-logo{width:34px;height:34px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hdr h1{font-size:1.1rem;font-weight:700;}
+.hdr p{font-size:.72rem;opacity:.85;margin-top:1px;}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.hdr-badge{background:#fff2;border:1px solid #fff4;border-radius:20px;padding:3px 12px;font-size:.7rem;font-weight:600;}
+.live-dot{width:8px;height:8px;background:#3dd68c;border-radius:50%;animation:pulse 1.8s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.3);}}
+
+/* NAV TABS */
+.nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0;overflow-x:auto;}
+.ntab{padding:11px 18px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;}
+.ntab:hover{color:var(--brand);}
+.ntab.active{color:var(--brand);border-bottom-color:var(--brand);}
+
+/* RELEASE BANNER */
+.rbanner{background:linear-gradient(90deg,#0e2952,#0d3d8c);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:20px;margin:0;}
+.rb-rel{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 16px;text-align:center;min-width:130px;}
+.rb-rel .rb-label{font-size:.65rem;opacity:.75;text-transform:uppercase;letter-spacing:.07em;}
+.rb-rel .rb-val{font-size:1.1rem;font-weight:700;margin-top:1px;}
+.rb-sep{width:1px;height:40px;background:rgba(255,255,255,.2);}
+.rb-info{flex:1;}
+.rb-info h2{font-size:.95rem;font-weight:700;}
+.rb-info p{font-size:.75rem;opacity:.8;margin-top:3px;}
+.rb-cta{background:var(--brand);border:none;color:#fff;border-radius:6px;padding:8px 18px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+.rb-cta:hover{background:#0265b5;}
+
+/* MAIN */
+.main{padding:20px 24px;max-width:1400px;margin:0 auto;}
+
+/* KPI STRIP */
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:box-shadow .15s;}
+.kpi:hover{box-shadow:0 3px 10px rgba(0,0,0,.1);}
+.kpi .kv{font-size:1.8rem;font-weight:700;color:var(--brand);line-height:1;}
+.kpi .kl{font-size:.68rem;color:var(--muted);margin-top:4px;}
+.kpi .kt{font-size:.65rem;margin-top:4px;border-radius:8px;display:inline-block;padding:1px 6px;font-weight:700;}
+.kt-up{background:#eaf5ea;color:var(--green);}
+.kt-warn{background:#fff0d9;color:#9a5300;}
+.kt-info{background:var(--light);color:var(--dark);}
+
+/* GRID LAYOUTS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.g13{display:grid;grid-template-columns:1fr 3fr;gap:16px;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-hdr h3{font-size:.85rem;font-weight:700;}
+.card-hdr span{font-size:.68rem;color:var(--muted);}
+.card-body{padding:14px 16px;}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:30px;}
+.timeline::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--border);}
+.tl-item{position:relative;padding-bottom:20px;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-dot{position:absolute;left:-24px;top:2px;width:14px;height:14px;border-radius:50%;border:2px solid var(--card);}
+.tl-dot.past{background:var(--green);}
+.tl-dot.current{background:var(--brand);box-shadow:0 0 0 3px rgba(1,118,211,.25);animation:ringpulse 2s infinite;}
+.tl-dot.upcoming{background:var(--border);border-color:var(--muted);}
+.tl-dot.future{background:#e8e8e8;border-color:#ccc;}
+@keyframes ringpulse{0%,100%{box-shadow:0 0 0 3px rgba(1,118,211,.25);}50%{box-shadow:0 0 0 6px rgba(1,118,211,.12);}}
+.tl-date{font-size:.65rem;color:var(--muted);font-weight:600;margin-bottom:2px;}
+.tl-title{font-size:.82rem;font-weight:700;}
+.tl-sub{font-size:.7rem;color:var(--muted);margin-top:2px;}
+.tl-tag{display:inline-block;border-radius:8px;padding:1px 7px;font-size:.63rem;font-weight:700;margin-top:4px;}
+.t-ga{background:#eaf5ea;color:var(--green);}
+.t-prev{background:var(--light);color:var(--dark);}
+.t-crit{background:#fde8e8;color:var(--red);}
+.t-up{background:#fff0d9;color:#9a5300;}
+
+/* READINESS CARDS */
+.rcard{border:1px solid var(--border);border-radius:8px;padding:14px;background:var(--card);}
+.rcard-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.rcard-title{font-size:.82rem;font-weight:700;}
+.rcard-pct{font-size:1.2rem;font-weight:700;}
+.prog{background:#e8e8e8;border-radius:4px;height:8px;margin:6px 0;}
+.prog-fill{border-radius:4px;height:8px;transition:width .5s;}
+.prog-green{background:var(--green);}
+.prog-blue{background:var(--brand);}
+.prog-orange{background:var(--orange);}
+.prog-red{background:var(--red);}
+.rcard-items{font-size:.7rem;color:var(--muted);margin-top:8px;}
+.rcard-items div{display:flex;align-items:center;gap:6px;padding:2px 0;}
+.rcard-items .chk{font-size:.8rem;}
+
+/* FEATURE LIST */
+.feat-list{list-style:none;}
+.feat-item{border-bottom:1px solid #f0f0f0;padding:10px 0;}
+.feat-item:last-child{border-bottom:none;}
+.feat-name{font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:8px;}
+.feat-desc{font-size:.71rem;color:var(--muted);margin-top:3px;}
+.feat-tags{margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;}
+
+/* BADGES */
+.badge{display:inline-block;border-radius:10px;padding:2px 8px;font-size:.64rem;font-weight:700;}
+.b-new{background:#eaf5ea;color:var(--green);border:1px solid #a8d5a9;}
+.b-chg{background:var(--light);color:var(--dark);border:1px solid #9cc8f0;}
+.b-dep{background:#fde8e8;color:var(--red);border:1px solid #f4a9a9;}
+.b-beta{background:#f3ebff;color:#6a14d4;border:1px solid #c7a8f9;}
+.b-ga{background:#eaf5ea;color:var(--green);border:1px solid #a8d5a9;}
+.b-cu{background:#fff0d9;color:#9a5300;border:1px solid #ffd580;}
+.b-cloud{background:#e8f0fe;color:#1a56db;border:1px solid #a4c0f4;}
+.b-sales{background:#d8edff;color:#014486;border:1px solid #9cbfe8;}
+.b-svc{background:#eaf5ea;color:#1a6d2a;border:1px solid #a8d5a9;}
+.b-mkting{background:#fde8e8;color:#9b2e2e;border:1px solid #f4a9a9;}
+.b-exp{background:#f3ebff;color:#6a14d4;border:1px solid #c7a8f9;}
+.b-data{background:#fff0d9;color:#9a5300;border:1px solid #ffd580;}
+.b-flow{background:#e0f5f5;color:#05474e;border:1px solid #8ed5d5;}
+.b-sec{background:#fde8e8;color:#9b2e2e;border:1px solid #f4a9a9;}
+
+/* CRITICAL UPDATES TABLE */
+table{width:100%;border-collapse:collapse;font-size:.78rem;}
+th{background:#f8f9fa;text-align:left;padding:9px 12px;border-bottom:2px solid var(--border);font-weight:700;color:var(--muted);font-size:.67rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;}
+td{padding:8px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f5f8fc;}
+
+/* STATUS INDICATORS */
+.stat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
+.sd-green{background:var(--green);}
+.sd-orange{background:var(--orange);}
+.sd-red{background:var(--red);}
+.sd-blue{background:var(--brand);}
+.sd-grey{background:#aaa;}
+
+/* CHECKLIST */
+.checklist{list-style:none;}
+.cl-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:.78rem;}
+.cl-item:last-child{border-bottom:none;}
+.cl-check{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.cl-check.done{background:var(--green);border-color:var(--green);color:#fff;font-size:.75rem;}
+.cl-check.warn{background:var(--orange);border-color:var(--orange);color:#fff;font-size:.75rem;}
+.cl-check.todo{background:#fff;border-color:#ccc;}
+.cl-text{flex:1;}
+.cl-label{font-weight:600;}
+.cl-sub{color:var(--muted);font-size:.7rem;margin-top:1px;}
+.cl-owner{font-size:.66rem;background:var(--light);color:var(--dark);border-radius:8px;padding:1px 7px;white-space:nowrap;margin-left:auto;flex-shrink:0;}
+
+/* SECTION PANELS */
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* IMPACT MATRIX */
+.impact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+.impact-card{border:1px solid var(--border);border-radius:8px;padding:12px;background:#fff;}
+.impact-cloud{font-size:.75rem;font-weight:700;margin-bottom:6px;}
+.impact-level{display:flex;align-items:center;gap:6px;font-size:.72rem;}
+.impact-bar{flex:1;height:6px;border-radius:3px;background:#e8e8e8;}
+.impact-fill{height:6px;border-radius:3px;}
+
+/* RESPONSIVE */
+@media(max-width:900px){.g2,.g3,.g13{grid-template-columns:1fr;}}
+
+/* TOOLTIP HOVER */
+.tooltip-wrap{position:relative;display:inline-block;}
+.tooltip-wrap:hover .tooltip-content{display:block;}
+.tooltip-content{display:none;position:absolute;bottom:125%;left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:.68rem;padding:5px 10px;border-radius:5px;white-space:nowrap;z-index:99;}
+
+/* SCROLL */
+.scroll-container{overflow-x:auto;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-logo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Salesforce Release Readiness Dashboard</h1>
+    <p>Krishna Org &nbsp;·&nbsp; Technical Support Engineering &nbsp;·&nbsp; Winter '27 Preparation</p>
+  </div>
+  <div class="hdr-right">
+    <div class="live-dot"></div>
+    <span class="hdr-badge">Winter '27 · Preview Opens Oct 3</span>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav">
+  <div class="ntab active" data-panel="overview">Overview</div>
+  <div class="ntab" data-panel="features">What's New</div>
+  <div class="ntab" data-panel="critical">Critical Updates</div>
+  <div class="ntab" data-panel="readiness">Team Readiness</div>
+  <div class="ntab" data-panel="timeline">Timeline</div>
+  <div class="ntab" data-panel="checklist">Readiness Checklist</div>
+</div>
+
+<!-- RELEASE BANNER -->
+<div class="rbanner">
+  <div class="rb-rel">
+    <div class="rb-label">Current Release</div>
+    <div class="rb-val">Summer '26</div>
+  </div>
+  <div class="rb-sep"></div>
+  <div class="rb-rel">
+    <div class="rb-label">Next Release</div>
+    <div class="rb-val">Winter '27</div>
+  </div>
+  <div class="rb-sep"></div>
+  <div class="rb-rel">
+    <div class="rb-label">Sandbox Preview</div>
+    <div class="rb-val">Oct 3, 2026</div>
+  </div>
+  <div class="rb-sep"></div>
+  <div class="rb-rel">
+    <div class="rb-label">Production GA</div>
+    <div class="rb-val">Nov 14, 2026</div>
+  </div>
+  <div class="rb-sep"></div>
+  <div class="rb-info">
+    <h2>Winter '27 Preparation in Progress</h2>
+    <p>Critical updates auto-activation deadline: Oct 10, 2026 &nbsp;·&nbsp; 3 mandatory updates require TSE enablement testing &nbsp;·&nbsp; 47 days until Production GA</p>
+  </div>
+  <button class="rb-cta" onclick="switchPanel('timeline')">View Timeline →</button>
+</div>
+
+<div class="main">
+
+<!-- ============================================================ OVERVIEW ============================================================ -->
+<div class="panel active" id="panel-overview">
+
+  <!-- KPIs -->
+  <div class="krow">
+    <div class="kpi">
+      <div class="kv">47</div>
+      <div class="kl">Days to Winter '27 GA</div>
+      <div class="kt kt-warn">Nov 14, 2026</div>
+    </div>
+    <div class="kpi">
+      <div class="kv">142</div>
+      <div class="kl">New / Changed Features</div>
+      <div class="kt kt-info">+18 from Summer '26</div>
+    </div>
+    <div class="kpi">
+      <div class="kv">8</div>
+      <div class="kl">Critical Updates</div>
+      <div class="kt kt-warn">3 Auto-activate Oct 10</div>
+    </div>
+    <div class="kpi">
+      <div class="kv">5</div>
+      <div class="kl">Retiring Features</div>
+      <div class="kt kt-warn">Action Required</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:var(--green);">68%</div>
+      <div class="kl">Team Readiness Score</div>
+      <div class="kt kt-warn">Target: 90%</div>
+    </div>
+    <div class="kpi">
+      <div class="kv">23</div>
+      <div class="kl">KAs to Update</div>
+      <div class="kt kt-warn">Pre-GA deadline</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:var(--orange);">12</div>
+      <div class="kl">Open Readiness Items</div>
+      <div class="kt kt-warn">3 Blockers</div>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-bottom:16px;">
+
+    <!-- RELEASE TIMELINE MINI -->
+    <div class="card">
+      <div class="card-hdr"><h3>Release Timeline</h3><span>FY2026–27</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Feb 12 – Mar 7, 2026</div>
+            <div class="tl-title">Spring '26 (GA)</div>
+            <div class="tl-sub">Flow Enhancements · Einstein Copilot GA · Agentforce Foundations</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Jun 6 – Jun 14, 2026</div>
+            <div class="tl-title">Summer '26 (Current GA)</div>
+            <div class="tl-sub">Agentforce 2.0 · Enhanced Data Cloud · LWC Offline GA</div>
+            <span class="tl-tag t-ga">Live in Production</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot current"></div>
+            <div class="tl-date">Oct 3, 2026 (Sandbox Preview)</div>
+            <div class="tl-title">Winter '27 — Preview Phase</div>
+            <div class="tl-sub">Sandbox opens Oct 3 · CS orgs preview Oct 10</div>
+            <span class="tl-tag t-prev">Active Now</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot upcoming"></div>
+            <div class="tl-date">Nov 14 – Nov 21, 2026</div>
+            <div class="tl-title">Winter '27 (Production GA)</div>
+            <div class="tl-sub">Agentforce 3.0 · Unified Einstein Platform · Flow Orchestration</div>
+            <span class="tl-tag t-up">Upcoming</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot future"></div>
+            <div class="tl-date">Feb–Mar 2027 (est.)</div>
+            <div class="tl-title">Spring '27</div>
+            <div class="tl-sub">Release notes TBD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEATURE IMPACT BY CLOUD -->
+    <div class="card">
+      <div class="card-hdr"><h3>Winter '27 Feature Impact by Cloud</h3><span>TSE impact assessment</span></div>
+      <div class="card-body">
+        <canvas id="chartClouds" style="max-height:230px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="g3" style="margin-bottom:16px;">
+    <!-- TEAM READINESS -->
+    <div class="rcard">
+      <div class="rcard-hdr"><div class="rcard-title">Sales Cloud Pod</div><div class="rcard-pct" style="color:var(--green);">74%</div></div>
+      <div class="prog"><div class="prog-fill prog-green" style="width:74%"></div></div>
+      <div class="rcard-items">
+        <div><span class="chk">✅</span> Flow & Process Builder training done</div>
+        <div><span class="chk">✅</span> CPQ Winter '27 changes reviewed</div>
+        <div><span class="chk">⚠️</span> Einstein Copilot new skills — in progress</div>
+        <div><span class="chk">❌</span> Agentforce 3.0 enablement pending</div>
+      </div>
+    </div>
+    <div class="rcard">
+      <div class="rcard-hdr"><div class="rcard-title">Service Cloud Pod</div><div class="rcard-pct" style="color:var(--orange);">61%</div></div>
+      <div class="prog"><div class="prog-fill prog-orange" style="width:61%"></div></div>
+      <div class="rcard-items">
+        <div><span class="chk">✅</span> Omni-Channel routing updates reviewed</div>
+        <div><span class="chk">✅</span> Knowledge management changes done</div>
+        <div><span class="chk">⚠️</span> Einstein Case Classification changes</div>
+        <div><span class="chk">❌</span> Digital Engagement new channels pending</div>
+        <div><span class="chk">❌</span> Flow Orchestration enablement pending</div>
+      </div>
+    </div>
+    <div class="rcard">
+      <div class="rcard-hdr"><div class="rcard-title">Swarm / Cross-Cloud</div><div class="rcard-pct" style="color:var(--orange);">69%</div></div>
+      <div class="prog"><div class="prog-fill prog-blue" style="width:69%"></div></div>
+      <div class="rcard-items">
+        <div><span class="chk">✅</span> Critical Updates list reviewed</div>
+        <div><span class="chk">✅</span> Security & Sharing changes mapped</div>
+        <div><span class="chk">⚠️</span> Data Cloud integration changes</div>
+        <div><span class="chk">❌</span> Agentforce Agent Studio GA prep</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRITICAL UPDATES SUMMARY -->
+  <div class="card">
+    <div class="card-hdr"><h3>Critical Updates — Winter '27 (Auto-Activation Watch)</h3><span>3 auto-activate Oct 10 · 5 auto-activate Nov 14</span></div>
+    <div class="scroll-container">
+      <table>
+        <thead><tr>
+          <th>Update</th><th>Area</th><th>Auto-Activate</th><th>Impact</th><th>Action Required</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Enforce User Permissions on API Callouts via Flows</strong></td>
+            <td><span class="badge b-flow">Flow</span></td>
+            <td><strong style="color:var(--red);">Oct 10, 2026</strong></td>
+            <td><span class="badge b-dep">High</span></td>
+            <td>Test flows using API callouts with system context</td>
+            <td><span class="stat-dot sd-orange"></span>In Progress</td>
+          </tr>
+          <tr>
+            <td><strong>Retire Classic Email Composer in Cases</strong></td>
+            <td><span class="badge b-svc">Service Cloud</span></td>
+            <td><strong style="color:var(--red);">Oct 10, 2026</strong></td>
+            <td><span class="badge b-dep">High</span></td>
+            <td>Validate Lightning Email Composer replaces all functionality</td>
+            <td><span class="stat-dot sd-red"></span>Not Started</td>
+          </tr>
+          <tr>
+            <td><strong>Enhanced Domain Stabilization - My Domain Required</strong></td>
+            <td><span class="badge b-sec">Security</span></td>
+            <td><strong style="color:var(--red);">Oct 10, 2026</strong></td>
+            <td><span class="badge b-dep">Critical</span></td>
+            <td>Confirm all customer orgs have My Domain enabled</td>
+            <td><span class="stat-dot sd-orange"></span>In Progress</td>
+          </tr>
+          <tr>
+            <td><strong>Restrict Cross-Org Data Sharing Without Explicit Grant</strong></td>
+            <td><span class="badge b-sec">Security</span></td>
+            <td>Nov 14, 2026</td>
+            <td><span class="badge b-cu">Medium</span></td>
+            <td>Review sharing rule configurations for integrations</td>
+            <td><span class="stat-dot sd-green"></span>Reviewed</td>
+          </tr>
+          <tr>
+            <td><strong>Einstein AI Opt-In Replaces Opt-Out for New Features</strong></td>
+            <td><span class="badge b-sales">Sales Cloud</span></td>
+            <td>Nov 14, 2026</td>
+            <td><span class="badge b-cu">Medium</span></td>
+            <td>Communicate to customers about auto-enabled AI features</td>
+            <td><span class="stat-dot sd-blue"></span>Planned</td>
+          </tr>
+          <tr>
+            <td><strong>Apex Async Framework Governor Limit Tightening</strong></td>
+            <td><span class="badge b-cloud">Apex</span></td>
+            <td>Nov 14, 2026</td>
+            <td><span class="badge b-cu">Medium</span></td>
+            <td>Audit batch job SOQL patterns for new limits</td>
+            <td><span class="stat-dot sd-blue"></span>Planned</td>
+          </tr>
+          <tr>
+            <td><strong>LWC Component Library Deprecated APIs Removed</strong></td>
+            <td><span class="badge b-cloud">LWC</span></td>
+            <td>Nov 14, 2026</td>
+            <td><span class="badge b-cu">Low</span></td>
+            <td>Identify customer orgs using deprecated component APIs</td>
+            <td><span class="stat-dot sd-green"></span>Reviewed</td>
+          </tr>
+          <tr>
+            <td><strong>Flow Interview State Expiration Reduced to 30 Days</strong></td>
+            <td><span class="badge b-flow">Flow</span></td>
+            <td>Nov 14, 2026</td>
+            <td><span class="badge b-cu">Low</span></td>
+            <td>Alert on long-running Screen Flow implementations</td>
+            <td><span class="stat-dot sd-green"></span>Done</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /overview -->
+
+
+<!-- ============================================================ FEATURES ============================================================ -->
+<div class="panel" id="panel-features">
+
+  <div class="krow" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));margin-bottom:20px;">
+    <div class="kpi"><div class="kv">38</div><div class="kl">Sales Cloud</div></div>
+    <div class="kpi"><div class="kv">31</div><div class="kl">Service Cloud</div></div>
+    <div class="kpi"><div class="kv">22</div><div class="kl">Agentforce / AI</div></div>
+    <div class="kpi"><div class="kv">18</div><div class="kl">Flow / Automation</div></div>
+    <div class="kpi"><div class="kv">14</div><div class="kl">Platform / Core</div></div>
+    <div class="kpi"><div class="kv">11</div><div class="kl">Data Cloud</div></div>
+    <div class="kpi"><div class="kv">8</div><div class="kl">Marketing Cloud</div></div>
+  </div>
+
+  <div class="g2">
+    <!-- AGENTFORCE / AI -->
+    <div class="card">
+      <div class="card-hdr"><h3>🤖 Agentforce & Einstein AI</h3><span>22 changes · High TSE Impact</span></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">GA</span> Agentforce 3.0 — Autonomous Agent Orchestration</div>
+            <div class="feat-desc">Agents can now spawn sub-agents and orchestrate multi-step workflows autonomously. Replaces manual flow handoffs in many service scenarios.</div>
+            <div class="feat-tags"><span class="badge b-svc">Service Cloud</span><span class="badge b-sales">Sales Cloud</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">GA</span> Einstein Copilot — Unified Prompt Studio</div>
+            <div class="feat-desc">Single interface to author, test, and deploy prompts across all Einstein features. Deprecates separate copilot builder tools.</div>
+            <div class="feat-tags"><span class="badge b-dep">Migration Required</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-beta">Beta</span> Agent Studio — No-Code Agent Builder</div>
+            <div class="feat-desc">Declarative builder for creating Agentforce agents without Apex. Beta customers get early access with Winter '27 sandbox preview.</div>
+            <div class="feat-tags"><span class="badge b-beta">Beta</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> Einstein Case Classification — Model Updates</div>
+            <div class="feat-desc">New multi-label classification model increases accuracy but changes field-mapping behavior. Existing configs auto-migrate.</div>
+            <div class="feat-tags"><span class="badge b-svc">Service Cloud</span><span class="badge b-cu">Review Needed</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">New</span> Predictive Forecasting v3 — Territory AI</div>
+            <div class="feat-desc">AI-powered forecasting now factors in territory changes and historical win rates at quota tier. New dashboards included.</div>
+            <div class="feat-tags"><span class="badge b-sales">Sales Cloud</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- FLOW & AUTOMATION -->
+    <div class="card">
+      <div class="card-hdr"><h3>⚡ Flow & Automation</h3><span>18 changes · Critical Updates included</span></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">GA</span> Flow Orchestration — Cross-Object Work Queues</div>
+            <div class="feat-desc">Flow Orchestration now supports routing work items across objects using Omni-Channel work queues. Replaces legacy process automation patterns.</div>
+            <div class="feat-tags"><span class="badge b-svc">Service Cloud</span><span class="badge b-flow">Flow</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> User Permissions on API Callout Flows</div>
+            <div class="feat-desc">Flows that make Apex callouts will now enforce running-user permissions. System mode must be explicitly declared. <strong>Auto-activates Oct 10.</strong></div>
+            <div class="feat-tags"><span class="badge b-dep">Breaking Change</span><span class="tl-tag t-crit" style="font-size:.63rem;padding:1px 6px;border-radius:8px;">Auto-Activates Oct 10</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">New</span> Screen Flow — Conditional Sections Component</div>
+            <div class="feat-desc">New native component to conditionally show/hide sections in Screen Flows without custom LWC. Supports display conditions and lazy loading.</div>
+            <div class="feat-tags"><span class="badge b-flow">Flow</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> Flow Interview State Expiration — 30 Days</div>
+            <div class="feat-desc">Long-paused screen flow interviews will now expire after 30 days (previously 90). Affects multi-day approval workflows built on Screen Flow.</div>
+            <div class="feat-tags"><span class="badge b-cu">Review Needed</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-dep">Retiring</span> Process Builder — Final Deprecation Notice</div>
+            <div class="feat-desc">Process Builder enters read-only mode in Winter '27. No new processes can be created. Migration to Flow required before Summer '27.</div>
+            <div class="feat-tags"><span class="badge b-dep">Action Required</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SALES CLOUD -->
+    <div class="card">
+      <div class="card-hdr"><h3>💼 Sales Cloud</h3><span>38 changes</span></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">GA</span> Revenue Cloud — Unified Billing</div>
+            <div class="feat-desc">Unified Billing merges CPQ billing and Subscription Management into one data model. Separate objects will be retired in Spring '27.</div>
+            <div class="feat-tags"><span class="badge b-sales">Sales Cloud</span><span class="badge b-dep">Migration Path</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> Opportunity Splits — New Split Types</div>
+            <div class="feat-desc">Two new split types (Partner Credit, Overlay) added. Custom split type limits increased to 5. Existing splits unaffected.</div>
+            <div class="feat-tags"><span class="badge b-sales">Sales Cloud</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">New</span> Deal Rooms — Slack Integration</div>
+            <div class="feat-desc">Deal Rooms now create dedicated Slack channels automatically on opportunity stage advancement. Requires Slack integration enabled.</div>
+            <div class="feat-tags"><span class="badge b-sales">Sales Cloud</span><span class="badge b-new">New</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> Forecasting — Quota Hierarchy Changes</div>
+            <div class="feat-desc">Quota rollup now respects territory hierarchy in addition to user hierarchy. May change existing forecast totals for split-territory orgs.</div>
+            <div class="feat-tags"><span class="badge b-cu">Review Needed</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SERVICE CLOUD -->
+    <div class="card">
+      <div class="card-hdr"><h3>🎧 Service Cloud</h3><span>31 changes</span></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-dep">Retiring</span> Classic Email Composer in Cases</div>
+            <div class="feat-desc">Classic email composer removed. Lightning Email Composer becomes mandatory. <strong>Auto-activates Oct 10, 2026.</strong> Custom templates must be migrated.</div>
+            <div class="feat-tags"><span class="badge b-dep">Breaking Change</span><span class="tl-tag t-crit" style="font-size:.63rem;padding:1px 6px;border-radius:8px;">Auto-Activates Oct 10</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">GA</span> Omni-Channel — Skills-Based Routing v2</div>
+            <div class="feat-desc">New scoring algorithm for skills-based routing improves match accuracy by 40%. Existing skill assignments auto-migrate; routing rules may need retuning.</div>
+            <div class="feat-tags"><span class="badge b-svc">Service Cloud</span><span class="badge b-cu">Validate</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">New</span> Digital Engagement — WhatsApp Business v2</div>
+            <div class="feat-desc">WhatsApp Cloud API replaces the on-premises integration. Existing WhatsApp channels need re-authentication before Nov 1.</div>
+            <div class="feat-tags"><span class="badge b-svc">Service Cloud</span><span class="badge b-dep">Action Required</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">GA</span> Knowledge — AI-Powered Article Suggestions</div>
+            <div class="feat-desc">Einstein now suggests related articles during case creation using semantic search. Requires Data Cloud connection for full capability.</div>
+            <div class="feat-tags"><span class="badge b-svc">Service Cloud</span><span class="badge b-new">Opportunity</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> Case Teams — Granular Role Permissions</div>
+            <div class="feat-desc">New read/edit/owner case team roles replace simple member/manager split. All existing teams default to "Read/Edit" — review high-sensitivity orgs.</div>
+            <div class="feat-tags"><span class="badge b-cu">Review Needed</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PLATFORM / CORE -->
+    <div class="card">
+      <div class="card-hdr"><h3>🔧 Platform & Core</h3><span>14 changes · Security focus</span></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-dep">Critical</span> My Domain — Mandatory for All Orgs</div>
+            <div class="feat-desc">Orgs without My Domain enabled will have it auto-activated with Winter '27. Login URLs will change. Communicate to all affected customers.</div>
+            <div class="feat-tags"><span class="badge b-dep">Breaking Change</span><span class="tl-tag t-crit" style="font-size:.63rem;padding:1px 6px;border-radius:8px;">Auto-Activates Oct 10</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> Apex — Async Governor Limit Tightening</div>
+            <div class="feat-desc">Total SOQL queries in async Apex reduced from 200 to 150 per transaction in batch contexts. Affects custom batch integrations.</div>
+            <div class="feat-tags"><span class="badge b-cloud">Apex</span><span class="badge b-cu">Review Needed</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-dep">Retiring</span> LWC Deprecated APIs Removal</div>
+            <div class="feat-desc">APIs marked deprecated in Summer '25 are now removed: <code>lightning-navigation</code> legacy params, <code>force:*</code> component events (partial).</div>
+            <div class="feat-tags"><span class="badge b-cloud">LWC</span><span class="badge b-dep">Action Required</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">New</span> User Permission Sets — Assignment Expiration</div>
+            <div class="feat-desc">Permission Set assignments can now be given an expiration date. New PermissionSetAssignment field: <code>ExpirationDate</code>.</div>
+            <div class="feat-tags"><span class="badge b-sec">Security</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- DATA CLOUD -->
+    <div class="card">
+      <div class="card-hdr"><h3>📊 Data Cloud & Analytics</h3><span>11 changes</span></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">GA</span> Data Cloud — Unified Profiles in Service Console</div>
+            <div class="feat-desc">Unified Customer Profiles from Data Cloud now surface natively in Service Console without custom configuration. Requires Data Cloud license.</div>
+            <div class="feat-tags"><span class="badge b-data">Data Cloud</span><span class="badge b-svc">Service Cloud</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-new">New</span> Data Cloud — Zero-Copy Integration with Snowflake</div>
+            <div class="feat-desc">Data doesn't need to move to be segmented — query Snowflake tables directly from Data Cloud without ETL. Generally available.</div>
+            <div class="feat-tags"><span class="badge b-data">Data Cloud</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-chg">Changed</span> Tableau — Embedded Analytics Engine</div>
+            <div class="feat-desc">Tableau Embedded replaces CRM Analytics (Einstein Analytics) as the default analytics layer. Existing dashboards auto-migrated with fidelity review recommended.</div>
+            <div class="feat-tags"><span class="badge b-data">Analytics</span><span class="badge b-dep">Migration Review</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /features -->
+
+
+<!-- ============================================================ CRITICAL UPDATES ============================================================ -->
+<div class="panel" id="panel-critical">
+
+  <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:.8rem;">
+    ⚠ <strong>3 critical updates auto-activate on October 10, 2026</strong> — Sandboxes must be validated before this date. Production auto-activation follows on November 14.
+  </div>
+
+  <div class="g2" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-hdr"><h3>Updates Auto-Activating Oct 10 (Blockers)</h3><span>Must test in sandbox before this date</span></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="tl-tag t-crit" style="border-radius:8px;font-size:.63rem;padding:1px 6px;">BLOCKER</span> &nbsp;My Domain — Auto-Enable for All Orgs</div>
+            <div class="feat-desc"><strong>Impact:</strong> Login URLs will change for orgs without custom domain. Bookmark and SSO configurations break. Affects ~12% of our customer base.<br><strong>TSE Action:</strong> Pre-emptively flag all affected accounts. KA refresh needed: <em>"My Domain: What Changes and How to Update SSO"</em></div>
+            <div class="feat-tags"><span class="stat-dot sd-orange"></span><span style="font-size:.7rem;">In Progress — Owner: Security Pod</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="tl-tag t-crit" style="border-radius:8px;font-size:.63rem;padding:1px 6px;">BLOCKER</span> &nbsp;Flow User Permissions on API Callouts</div>
+            <div class="feat-desc"><strong>Impact:</strong> Flows using external callouts in System Mode will fail unless explicitly re-declared. High case volume expected from integration-heavy customers.<br><strong>TSE Action:</strong> Prepare runbook for "Flow callout permission errors after Winter '27". Proactive health-check guide needed.</div>
+            <div class="feat-tags"><span class="stat-dot sd-orange"></span><span style="font-size:.7rem;">In Progress — Owner: Automation Pod</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="tl-tag t-crit" style="border-radius:8px;font-size:.63rem;padding:1px 6px;">BLOCKER</span> &nbsp;Classic Email Composer Retirement</div>
+            <div class="feat-desc"><strong>Impact:</strong> Custom email templates built on the classic composer will be inoperable. Affects Case management workflows with inline HTML templates.<br><strong>TSE Action:</strong> New KA needed: "Migrating Classic Email Templates to Lightning for Cases".</div>
+            <div class="feat-tags"><span class="stat-dot sd-red"></span><span style="font-size:.7rem;">Not Started — Owner: Service Cloud Pod</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>Updates Auto-Activating Nov 14 (Production GA)</h3></div>
+      <div class="card-body">
+        <ul class="feat-list">
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-cu">Medium</span> Restrict Cross-Org Data Sharing</div>
+            <div class="feat-desc">Orgs using cross-org sharing patterns (External Data Sources, OData) must explicitly grant sharing. Affects multi-org architectures.</div>
+            <div class="feat-tags"><span class="stat-dot sd-green"></span><span style="font-size:.7rem;">Reviewed — Runbook drafted</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-cu">Medium</span> Einstein AI Features Default Opt-In</div>
+            <div class="feat-desc">New Einstein features will be enabled by default for all eligible orgs. Customers must explicitly opt-out. Expect questions on what changed.</div>
+            <div class="feat-tags"><span class="stat-dot sd-blue"></span><span style="font-size:.7rem;">Planned — KA update in backlog</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-cu">Medium</span> Apex Async SOQL Limit: 200→150</div>
+            <div class="feat-desc">Batch Apex jobs that hit exactly 200 queries per transaction will now fail. Affects orgs with tight batch implementations.</div>
+            <div class="feat-tags"><span class="stat-dot sd-blue"></span><span style="font-size:.7rem;">Planned — Impact analysis underway</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-cu">Low</span> LWC Legacy API Removal</div>
+            <div class="feat-desc"><code>force:navigateToSObject</code> and related legacy events fully removed. Customers using unmanaged packages with these APIs will get errors.</div>
+            <div class="feat-tags"><span class="stat-dot sd-green"></span><span style="font-size:.7rem;">Reviewed — KA updated</span></div>
+          </li>
+          <li class="feat-item">
+            <div class="feat-name"><span class="badge b-cu">Low</span> Flow Interview Expiration: 90d→30d</div>
+            <div class="feat-desc">Paused Screen Flow interviews expire after 30 days. Only affects multi-day approval-style screen flows.</div>
+            <div class="feat-tags"><span class="stat-dot sd-green"></span><span style="font-size:.7rem;">Done — Documentation complete</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><h3>Feature Retirements — Action Required Before Winter '27</h3></div>
+    <div class="scroll-container">
+      <table>
+        <thead><tr>
+          <th>Feature</th><th>Replacement</th><th>Hard Deadline</th><th>Customer Impact</th><th>KA Status</th><th>Owner</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Process Builder (Create New)</strong></td>
+            <td>Flow Builder</td>
+            <td><strong style="color:var(--red);">Nov 14, 2026 (Read-Only)</strong></td>
+            <td>All orgs with active processes</td>
+            <td><span class="badge b-ok" style="background:#eaf5ea;color:var(--green);">KA Updated</span></td>
+            <td>Automation Pod</td>
+          </tr>
+          <tr>
+            <td><strong>Classic Email Composer (Cases)</strong></td>
+            <td>Lightning Email Composer</td>
+            <td><strong style="color:var(--red);">Oct 10, 2026</strong></td>
+            <td>Service orgs with custom templates</td>
+            <td><span class="badge" style="background:#fde8e8;color:var(--red);">KA Needed</span></td>
+            <td>Service Cloud Pod</td>
+          </tr>
+          <tr>
+            <td><strong>Salesforce Classic UI</strong></td>
+            <td>Lightning Experience</td>
+            <td>Nov 14, 2026 (blocked new logins)</td>
+            <td>Classic-only orgs (rare)</td>
+            <td><span class="badge b-ok" style="background:#eaf5ea;color:var(--green);">Documented</span></td>
+            <td>Cross-Cloud</td>
+          </tr>
+          <tr>
+            <td><strong>CRM Analytics (Einstein Analytics)</strong></td>
+            <td>Tableau Embedded</td>
+            <td>Feb 2027 (Spring '27)</td>
+            <td>Analytics-licensed orgs</td>
+            <td><span class="badge b-cu">In Progress</span></td>
+            <td>Analytics Swarm</td>
+          </tr>
+          <tr>
+            <td><strong>WhatsApp On-Prem Integration</strong></td>
+            <td>WhatsApp Cloud API</td>
+            <td><strong style="color:var(--orange);">Nov 1, 2026 (WhatsApp mandate)</strong></td>
+            <td>Digital Engagement customers</td>
+            <td><span class="badge" style="background:#fde8e8;color:var(--red);">KA Needed</span></td>
+            <td>Digital Engagement</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /critical -->
+
+
+<!-- ============================================================ READINESS ============================================================ -->
+<div class="panel" id="panel-readiness">
+
+  <div class="g2" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-hdr"><h3>Readiness Score by Pod</h3><span>Target: 90% before Oct 10</span></div>
+      <div class="card-body"><canvas id="chartReadiness" style="max-height:260px;"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>KA Coverage for Winter '27 Features</h3></div>
+      <div class="card-body"><canvas id="chartKA" style="max-height:260px;"></canvas></div>
+    </div>
+  </div>
+
+  <div class="g3">
+    <div class="card">
+      <div class="card-hdr"><h3>India – Sales Cloud Pod</h3><span>Leads: AA, SD · Dir: MC</span></div>
+      <div class="card-body">
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;font-weight:700;margin-bottom:4px;"><span>Overall Readiness</span><span style="color:var(--green);">74%</span></div>
+          <div class="prog"><div class="prog-fill prog-green" style="width:74%"></div></div>
+        </div>
+        <ul class="checklist">
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Flow & Automation changes reviewed</div><div class="cl-sub">Process Builder retirement + Flow Orchestration</div></div><span class="cl-owner">Team</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Revenue Cloud / CPQ Winter '27 changes</div><div class="cl-sub">Unified Billing migration paths mapped</div></div><span class="cl-owner">Team</span></li>
+          <li class="cl-item"><div class="cl-check warn">!</div><div class="cl-text"><div class="cl-label">Einstein Copilot new skills training</div><div class="cl-sub">50% of team complete — deadline Oct 5</div></div><span class="cl-owner">MC/AA</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Agentforce 3.0 enablement training</div><div class="cl-sub">Not started — 12 engineers pending</div></div><span class="cl-owner">AA</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Process Builder migration runbook</div><div class="cl-sub">Draft in review</div></div><span class="cl-owner">SD</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>India – Service Cloud Pod</h3><span>Leads: MAB, AWD, MMT · Dir: AV</span></div>
+      <div class="card-body">
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;font-weight:700;margin-bottom:4px;"><span>Overall Readiness</span><span style="color:var(--orange);">61%</span></div>
+          <div class="prog"><div class="prog-fill prog-orange" style="width:61%"></div></div>
+        </div>
+        <ul class="checklist">
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Omni-Channel Skills Routing v2</div><div class="cl-sub">New routing algorithm validated in sandbox</div></div><span class="cl-owner">MAB</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Knowledge AI suggestions enablement</div><div class="cl-sub">Data Cloud connection verified</div></div><span class="cl-owner">Team</span></li>
+          <li class="cl-item"><div class="cl-check warn">!</div><div class="cl-text"><div class="cl-label">Classic Email Composer migration</div><div class="cl-sub">Oct 10 blocker — KA not yet drafted</div></div><span class="cl-owner">AWD</span></li>
+          <li class="cl-item"><div class="cl-check warn">!</div><div class="cl-text"><div class="cl-label">Einstein Case Classification changes</div><div class="cl-sub">Field mapping validation in progress</div></div><span class="cl-owner">MMT</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Digital Engagement — WhatsApp re-auth</div><div class="cl-sub">Not started — deadline Nov 1</div></div><span class="cl-owner">MAB</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Flow Orchestration new features</div><div class="cl-sub">Training module not assigned yet</div></div><span class="cl-owner">AWD</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Agentforce 3.0 enablement</div><div class="cl-sub">Not started — 18 engineers pending</div></div><span class="cl-owner">AV</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>Swarm / Cross-Cloud</h3><span>Leads: SB, JSQ, PCO, RQT</span></div>
+      <div class="card-body">
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;font-weight:700;margin-bottom:4px;"><span>Overall Readiness</span><span style="color:var(--orange);">69%</span></div>
+          <div class="prog"><div class="prog-fill prog-blue" style="width:69%"></div></div>
+        </div>
+        <ul class="checklist">
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Critical Updates list distributed</div><div class="cl-sub">All swarm leads briefed</div></div><span class="cl-owner">SB</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Security changes (My Domain, sharing)</div><div class="cl-sub">Runbook and KA updated</div></div><span class="cl-owner">JSQ</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">LWC API removal impact mapped</div><div class="cl-sub">Package scan completed</div></div><span class="cl-owner">PCO</span></li>
+          <li class="cl-item"><div class="cl-check warn">!</div><div class="cl-text"><div class="cl-label">Data Cloud integration changes</div><div class="cl-sub">Zero-copy + unified profiles — in progress</div></div><span class="cl-owner">RQT</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Agentforce Agent Studio (Beta) prep</div><div class="cl-sub">Not started — assign swarm owner</div></div><span class="cl-owner">SB</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /readiness -->
+
+
+<!-- ============================================================ TIMELINE ============================================================ -->
+<div class="panel" id="panel-timeline">
+
+  <div class="g13" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-hdr"><h3>Key Dates</h3></div>
+      <div class="card-body">
+        <ul style="list-style:none;font-size:.78rem;">
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--red);font-weight:700;">Oct 3</span> &nbsp; Sandbox Preview opens</li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--red);font-weight:700;">Oct 10</span> &nbsp; 3 Critical Updates auto-activate in sandboxes</li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--orange);font-weight:700;">Oct 15</span> &nbsp; KA update deadline (pre-GA priority)</li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--orange);font-weight:700;">Oct 31</span> &nbsp; Team readiness target: 85%</li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--orange);font-weight:700;">Nov 1</span> &nbsp; WhatsApp Cloud API migration deadline</li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--brand);font-weight:700;">Nov 7</span> &nbsp; Second patch sandbox preview</li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--brand);font-weight:700;">Nov 14</span> &nbsp; <strong>Production GA — Winter '27</strong></li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--brand);font-weight:700;">Nov 14</span> &nbsp; Remaining 5 critical updates auto-activate</li>
+          <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><span style="color:var(--muted);">Nov 21</span> &nbsp; Last instance tier GA</li>
+          <li style="padding:7px 0;"><span style="color:var(--muted);">Feb 2027</span> &nbsp; Spring '27 — estimated</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>Full Release History — FY2024–27</h3><span>Salesforce 3x/year release cadence</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Oct 2023 – Jan 2024</div>
+            <div class="tl-title">Winter '24</div>
+            <div class="tl-sub">Einstein Copilot (Beta) · Flow Orchestration (Beta) · Dynamic Forms GA</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Feb – Apr 2024</div>
+            <div class="tl-title">Spring '24</div>
+            <div class="tl-sub">Agentforce 1.0 Announced · Prompt Builder GA · Data Cloud Unification</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Jun – Aug 2024</div>
+            <div class="tl-title">Summer '24</div>
+            <div class="tl-sub">Einstein Copilot GA · Agentforce 1.0 GA · Process Builder Read-Only</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Oct 2024 – Jan 2025</div>
+            <div class="tl-title">Winter '25</div>
+            <div class="tl-sub">Enhanced Domains Enforced · Apex Limits Review · LWC Offline (Beta)</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Feb – Apr 2025</div>
+            <div class="tl-title">Spring '25</div>
+            <div class="tl-sub">Agentforce 2.0 · Flow Conditional Visibility · Revenue Cloud GA</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Jun – Aug 2025</div>
+            <div class="tl-title">Summer '25</div>
+            <div class="tl-sub">Unified Einstein Platform · Data Cloud Zero-Copy (Beta) · My Domain Mandate Notice</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Oct 2025 – Jan 2026</div>
+            <div class="tl-title">Winter '26</div>
+            <div class="tl-sub">Flow Orchestration GA · Agent Studio (Beta) · Einstein Article Suggestions</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Feb – Apr 2026</div>
+            <div class="tl-title">Spring '26</div>
+            <div class="tl-sub">Flow Enhancements · Einstein Copilot Prompt Studio · Agentforce Foundations</div>
+            <span class="tl-tag t-ga">Deployed</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot past"></div>
+            <div class="tl-date">Jun – Aug 2026</div>
+            <div class="tl-title">Summer '26 (Current)</div>
+            <div class="tl-sub">Agentforce 2.0 GA · Enhanced Data Cloud · LWC Offline GA · Deal Rooms (Beta)</div>
+            <span class="tl-tag t-ga">Live in Production</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot current"></div>
+            <div class="tl-date">Oct 3 – Nov 21, 2026</div>
+            <div class="tl-title">Winter '27 — Active Preparation</div>
+            <div class="tl-sub">Agentforce 3.0 · Unified Billing GA · Flow Orchestration Cross-Object · My Domain Mandatory</div>
+            <span class="tl-tag t-prev">In Preview · GA Nov 14</span>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot future"></div>
+            <div class="tl-date">Feb – Apr 2027 (est.)</div>
+            <div class="tl-title">Spring '27</div>
+            <div class="tl-sub">Process Builder Fully Retired · CRM Analytics Retired · TBD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /timeline -->
+
+
+<!-- ============================================================ CHECKLIST ============================================================ -->
+<div class="panel" id="panel-checklist">
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr">
+        <h3>Pre-Sandbox Preview Checklist (Before Oct 3)</h3>
+        <span style="color:var(--green);font-weight:700;">6/10 Done</span>
+      </div>
+      <div class="card-body">
+        <ul class="checklist">
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Review Winter '27 release notes</div><div class="cl-sub">All team leads briefed via release readiness email</div></div><span class="cl-owner">KDV</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Identify critical updates requiring action</div><div class="cl-sub">8 updates identified; 3 categorized as blockers</div></div><span class="cl-owner">SB</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Distribute release update summary to all TSEs</div><div class="cl-sub">Sent via Slack #release-readiness channel Sep 1</div></div><span class="cl-owner">All Dirs</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Security & My Domain impact analysis</div><div class="cl-sub">Customer segment analysis complete; comms template drafted</div></div><span class="cl-owner">JSQ</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">LWC deprecated API scan on managed packages</div><div class="cl-sub">200+ packages scanned; 14 at-risk identified</div></div><span class="cl-owner">PCO</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">KA audit — which articles need Winter '27 updates</div><div class="cl-sub">23 articles flagged for update; prioritized by case volume</div></div><span class="cl-owner">SSR</span></li>
+          <li class="cl-item"><div class="cl-check warn">!</div><div class="cl-text"><div class="cl-label">Assign KA update owners for all 23 articles</div><div class="cl-sub">12 of 23 assigned; 11 pending assignment</div></div><span class="cl-owner">All Mgrs</span></li>
+          <li class="cl-item"><div class="cl-check warn">!</div><div class="cl-text"><div class="cl-label">Draft new KAs for Classic Email → Lightning migration</div><div class="cl-sub">Not started — critical blocker KA</div></div><span class="cl-owner">AWD Pod</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Schedule release readiness enablement sessions</div><div class="cl-sub">One session per pod, target week of Oct 6</div></div><span class="cl-owner">All Dirs</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Agentforce 3.0 hands-on lab registration</div><div class="cl-sub">Salesforce+ training links to be distributed</div></div><span class="cl-owner">KDV</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <h3>Pre-Production GA Checklist (Before Nov 14)</h3>
+        <span style="color:var(--orange);font-weight:700;">2/12 Done</span>
+      </div>
+      <div class="card-body">
+        <ul class="checklist">
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">All critical update testing completed in sandbox</div><div class="cl-sub">Oct 3–10 window</div></div><span class="cl-owner">All Pods</span></li>
+          <li class="cl-item"><div class="cl-check done">✓</div><div class="cl-text"><div class="cl-label">Flow interview expiration runbook published</div><div class="cl-sub">KA updated; customers notified via help.salesforce.com</div></div><span class="cl-owner">Team</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">My Domain migration guide KA finalized</div><div class="cl-sub">Draft in progress — target Oct 15</div></div><span class="cl-owner">JSQ</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Classic Email Composer KA published</div><div class="cl-sub">Not started — critical for Oct 10 blockers</div></div><span class="cl-owner">AWD Pod</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Flow + API callout permissions runbook</div><div class="cl-sub">Target Oct 20</div></div><span class="cl-owner">Automation Pod</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">WhatsApp Cloud API migration guide</div><div class="cl-sub">Deadline Nov 1 — priority KA needed</div></div><span class="cl-owner">MAB Pod</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">All 23 KA articles updated and published</div><div class="cl-sub">Target Oct 28</div></div><span class="cl-owner">All Mgrs</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Agentforce 3.0 enablement for all TSEs complete</div><div class="cl-sub">Target Nov 7</div></div><span class="cl-owner">All Dirs</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Team readiness score ≥ 90%</div><div class="cl-sub">Currently 68% — requires enablement completion</div></div><span class="cl-owner">KDV</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Revenue Cloud / Unified Billing customer comms</div><div class="cl-sub">High-value accounts to be proactively contacted</div></div><span class="cl-owner">MC Pod</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Go/No-Go sign-off from all Directors</div><div class="cl-sub">Nov 12 decision meeting</div></div><span class="cl-owner">KDV</span></li>
+          <li class="cl-item"><div class="cl-check todo"></div><div class="cl-text"><div class="cl-label">Post-GA hypercare rota published</div><div class="cl-sub">24h coverage Nov 14–21</div></div><span class="cl-owner">KDV</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /checklist -->
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchPanel(name) {
+  document.querySelectorAll('.ntab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  var t = document.querySelector('[data-panel="'+name+'"]');
+  var p = document.getElementById('panel-'+name);
+  if (t) t.classList.add('active');
+  if (p) { p.classList.add('active'); renderChartsForPanel(name); }
+}
+
+document.querySelectorAll('.ntab').forEach(function(tab){
+  tab.addEventListener('click', function(){ switchPanel(tab.getAttribute('data-panel')); });
+});
+
+// ============================================================
+// CHARTS
+// ============================================================
+var chartsRendered = {};
+
+function renderChartsForPanel(name) {
+  if (name === 'overview' && !chartsRendered.overview) {
+    chartsRendered.overview = true;
+
+    // Feature Impact by Cloud
+    new Chart(document.getElementById('chartClouds'), {
+      type: 'bar',
+      data: {
+        labels: ['Sales Cloud','Service Cloud','Agentforce/AI','Flow/Automation','Platform/Core','Data Cloud','Marketing'],
+        datasets: [{
+          label: 'New/Changed',
+          data: [38, 31, 22, 18, 14, 11, 8],
+          backgroundColor: ['#0176d3','#2e844a','#9050e9','#dd7a01','#014486','#06857b','#c23934'],
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { font: { size: 10 } } },
+          y: { ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  if (name === 'readiness' && !chartsRendered.readiness) {
+    chartsRendered.readiness = true;
+
+    // Readiness by Pod
+    new Chart(document.getElementById('chartReadiness'), {
+      type: 'bar',
+      data: {
+        labels: ['Sales Cloud Pod','Service Cloud Pod','Swarm / Cross-Cloud'],
+        datasets: [{
+          label: 'Current',
+          data: [74, 61, 69],
+          backgroundColor: ['#0176d3','#dd7a01','#9050e9'],
+          borderRadius: 4
+        },{
+          label: 'Target (90%)',
+          data: [90, 90, 90],
+          backgroundColor: 'rgba(0,0,0,0)',
+          borderColor: '#2e844a',
+          borderWidth: 2,
+          type: 'line',
+          pointRadius: 0
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: function(v){ return v+'%'; }, font: { size: 10 } } },
+          x: { ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+
+    // KA Coverage
+    new Chart(document.getElementById('chartKA'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Updated & Published','In Progress','Not Started'],
+        datasets: [{
+          data: [12, 6, 5],
+          backgroundColor: ['#2e844a','#dd7a01','#c23934'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: function(ctx){ return ctx.label + ': ' + ctx.raw + ' articles'; } } }
+        }
+      }
+    });
+  }
+}
+
+// Render charts for the default active panel
+renderChartsForPanel('overview');
+</script>
+</body>
+</html>
